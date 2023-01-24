@@ -1,0 +1,1 @@
+# PostgreSQL (Aurora) 13 vs 14 Nested Loop Join 성능 비교
