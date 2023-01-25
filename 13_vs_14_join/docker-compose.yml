@@ -1,0 +1,21 @@
+services:
+  pg13:
+    image: postgres:13
+    ports:
+      - '5432:5432'
+    container_name: pg13
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+  pg14:
+    image: postgres:14
+    ports:
+      - '5433:5432'
+    container_name: pg14
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
