@@ -37,5 +37,38 @@ SELECT *
 FROM team JOIN users ON team.department_no = users.department_no;
 ```
 
-### 성능 테스트
 
+```sql
+DO $$
+DECLARE
+  v_ts TIMESTAMP;
+  v_repeat CONSTANT INT := 25;
+  rec RECORD;
+BEGIN
+
+  FOR r IN 1..10 LOOP
+    v_ts := clock_timestamp();
+
+    FOR i IN 1..v_repeat LOOP
+      FOR rec IN (
+        SELECT team.*
+        FROM team JOIN users u2 on team.department_no = u2.department_no
+      ) LOOP
+        NULL;
+      END LOOP;
+    END LOOP;
+
+    RAISE INFO 'Run %, timestamp: %', r, (clock_timestamp() - v_ts);
+  END LOOP;
+END$$;
+```
+
+
+### PG 13
+
+![pg13_1](./images/pg13_1.png)
+
+
+### PG 14
+
+![pg14_1](./images/pg14_1.png)
