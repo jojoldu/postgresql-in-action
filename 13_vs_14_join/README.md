@@ -6,14 +6,8 @@ PostgreSQL에서는 3가지의 Join을 지원한다.
 - Hash join
 - Merge join
 
-이 중에서 보통 `Nested loop join` 을 가장 많이 사용된다.  
-(대부분의 Join 쿼리를 작성하면 `Nested loop join` 가 적용된다.)  
-  
-
-
-
-
-## Nested loop join
+Join 테이블 중 하나라도 행이 적은 경우 Nested loop join이 주로 적용된다.  
+Nested loop join 은 조인 조건이 동일 연산자를 사용하지 않는 경우에도 유일한 옵션으로 사용된다.
 
 외부 집합에는 예상대로 두 개의 행(실제 행=2)이 포함됩니다. 내부 인덱스 스캔 노드는 두 번 호출되었고(루프=2) 매번 평균적으로 4개의 행을 반환했습니다(실제 행=4). 총계는 8행입니다(실제 행=8).
 
