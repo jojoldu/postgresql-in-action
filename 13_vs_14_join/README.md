@@ -6,18 +6,26 @@ PostgreSQL에서는 3가지의 Join을 지원한다.
 - Hash join
 - Merge join
 
-Join 테이블 중 하나라도 행이 적은 경우 Nested loop join이 주로 적용된다.  
-Nested loop join 은 조인 조건이 동일 연산자를 사용하지 않는 경우에도 유일한 옵션으로 사용된다.
+이 중 Nested loop join 은 가장 보편적인 Join 방식으로 그 작동 방식에는 결국 반복적인 스캔이 있다.  
 
-동일한 매개변수를 사용하여 내부 집합 행을 반복적으로 스캔하고 (결과적으로) 매번 동일한 결과를 얻는다면 더 빠른 액세스를 위해 행을 캐시하는 것이 좋다.
-
+만약 반복적인 스캔에서 동일한 결과가 보장될때 이 결과를 캐시해두고 반복적인 스캔에서 계속 사용한다면 어떨까?    
+  
 PostgreSQL 14에서는 [memoize](https://postgresqlco.nf/doc/en/param/enable_memoize/) 의 도입으로 가능해졌다.  
   
 그리고 AWS의 Aurora PostgreSQL 역시 PostgreSQL 14.x를 지원하고 있어 해당 옵션을 사용할 수 있다.
 
 ![aurora-versions](./images/aurora-versions.png)
 
+이번엔 해당 옵션과 그 전 버전인 PG 13과의 성능 비교를 진행해보자.
+
+
+## 성능 테스트
+
+성능 테스트 전에 먼저 본인의 PostgreSQL DB가 해당 기능을 지원하는지 체크한다.
+
 ### enable_memoize
+
+아래 쿼리로 현재 설정을 확인할 수 있다.
 
 ```sql
 SELECT current_setting('enable_memoize');
@@ -25,14 +33,19 @@ SELECT current_setting('enable_memoize');
 
 ![console](./images/console.png)
 
+PG 14에서는 `enable_memoize` 의 **기본 옵션이 ON**이다.  
+그래서 별도의 설정 없이도 memoize 가 적용된다.   
+  
+AWS Aurora PostgreSQL을 사용한다면 다음과 같이 파라미터 그룹에서 확인할 수 있다.
+
 ![aurora-param](./images/aurora-param.png)
 
 > Amazon Aurora (RDS) 에서 파라미터가 Boolean이면 1 (ON) or 0 (OFF) 으로 설정한다.
 
 
+### 테스트
 
-
-## 성능 테스트
+테스트를 위해 다음의 환경을 13버전과 14버전에서 각각 만들어둔다.
 
 ```sql
 CREATE TABLE team AS
@@ -96,7 +109,6 @@ BEGIN
 END$$;
 ```
 
-
 ### PG 13
 
 PG 13에서는 다음과 같은 실행 계획을 가진다.
@@ -124,10 +136,16 @@ PG 14는 2가지 종류로 진행된다.
 
 #### enable_memoize OFF
 
+만약 똑같이 PG 14 버전을 사용하지만 **enable_memoize을 off한다면** 어떻게 될까?
+
 ![pg14_1_2](./images/pg14_1_2.png)
 
 - 1회 평균 `281ms` 
 - 10회 총합은 `2.814s` 이다.
+
+PG14라 하더라도 해당 옵션을 `off` 할 경우 PG 13과 거의 비슷한 성능 결과를 냈다.
+
+### 테스트 결과
 
 PG13에서 14로 업데이트후, `enable_memoize` 이 도입됨으로 **Nested Loop Join은 10%의 성능 개선**이 되었다.  
 (285ms -> 263ms)
@@ -174,6 +192,8 @@ Memoize 노드가 호출될 때마다 전달된 매개변수 값에 해당하는
 이는 가능한 매개변수 값의 추정치가 올바르지 않을 때 자주 발생한다.  
 이 경우 Memoize을 사용하는 것이 많은 리소스를 차지한다는 것을 의미할 수 있다.  
 이럴 경우 최후의 수단으로 `enable_memoize` 를 `off` 로 설정하여 캐시 사용을 비활성화할 수 있다.
+
+
 
 
 ## 마무리
