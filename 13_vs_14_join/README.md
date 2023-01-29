@@ -78,68 +78,99 @@ SELECT current_setting('enable_memoize');
 
 ```sql
 CREATE TABLE team AS
-SELECT team_no, team_no % 5 AS department_no
-FROM generate_series(1, 100000) AS team_no;
+SELECT team_no, team_no % 100 AS department_no
+FROM generate_series(1, 10000) AS team_no;
 
 CREATE TABLE users AS
 SELECT user_no, user_no % 20000 as department_no
-FROM generate_series(1, 100000) AS user_no;
+FROM generate_series(1, 5000000) AS user_no;
 
 CREATE INDEX idx_user_department_no ON users (department_no);
 ```
 
+- `team`
+  - 10,000 row (1만건)
+  - 1 ~ 100개의 `department_no`
+- `users`
+  - 5,000,000 row (500만건)
+  - 1 ~ 20,000 개의 `department_no`
+  - Join 성능 향상을 위한 index (`department_no`)
+
+위와 같이 테이블을 생성 한 뒤, 이제 실험을 진행한다.
+
+성능 테스트에 사용할 쿼리는 다음과 같다.
 
 ```sql
-EXPLAIN analyze
 SELECT *
-FROM team JOIN users ON team.department_no = users.department_no;
+FROM team JOIN users on team.department_no = users.department_no
+where team.department_no between 50 and 100;
 ```
 
-### PG13 vs PG14
+해당 쿼리는 
 
-성능 테스트는 아래 쿼리를 각각 PG13과 PG14에서 진행한다.
+- `team.department_no between 50 and 100` 는 `seq` 로 탐색하고
+- `team.department_no = users.department_no` 는 `index` 로 탐색한다.
+
+
+성능 테스트를 위해 아래와 같이 반복문으로 **총 10번의 쿼리를 수행하고, 총 수행시간**을 합산한다.
 
 ```sql
 DO $$
 DECLARE
   v_ts TIMESTAMP;
-  v_repeat CONSTANT INT := 25;
   rec RECORD;
 BEGIN
 
   FOR r IN 1..10 LOOP
     v_ts := clock_timestamp();
 
-    FOR i IN 1..v_repeat LOOP
       FOR rec IN (
-        SELECT team.*
-        FROM team JOIN users u2 on team.department_no = u2.department_no
+        SELECT *
+        FROM team JOIN users on team.department_no = users.department_no
+        where team.department_no between 50 and 100
       ) LOOP
         NULL;
       END LOOP;
-    END LOOP;
 
     RAISE INFO 'Run %, timestamp: %', r, (clock_timestamp() - v_ts);
   END LOOP;
 END$$;
 ```
 
-- 총 10번의 쿼리를 실행하고
-- 그 결과 시간을 출력한다.
 
-#### PG 13
+### PG 13
+
+PG 13에서는 다음과 같은 실행 계획을 가진다.
+
+그리고 실행 결과는 
 
 ![pg13_1](./images/pg13_1.png)
 
-평균 2.8초, 10회 총합은 28초이다.
+- 1회 평균 `285ms` 
+- 10회 총합은 `2.855s` 이다.
 
-#### PG 14
+### PG 14
+
+PG 14는 2가지 종류로 진행된다.
+
+- `enable_memoize` 를 `ON` 한 경우
+- `enable_memoize` 를 `OFF` 한 경우
+
+#### enable_memoize ON
 
 ![pg14_1](./images/pg14_1.png)
 
-평균 2.5초, 10회 총합은 25초이다.
+- 1회 평균 `263ms` 
+- 10회 총합은 `2.632s` 이다.
 
-PG13에서 14로 업데이트 이후, 대략 10%의 성능 개선이 되었다.
+#### enable_memoize OFF
+
+![pg14_1_2](./images/pg14_1_2.png)
+
+- 1회 평균 `281ms` 
+- 10회 총합은 `2.814s` 이다.
+
+PG13에서 14로 업데이트후, `enable_memoize` 이 도입됨으로 **Nested Loop Join은 10%의 성능 개선**이 되었다.
 
 ## LATERAL 
 
