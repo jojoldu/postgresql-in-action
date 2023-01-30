@@ -1,6 +1,6 @@
 # PostgreSQL14 Memoize (13 vs 14 Nested Loop Join 성능 비교)
 
-PostgreSQL에서는 3가지의 Join을 지원한다.
+PostgreSQL에서는 3가지의 Join 알고리즘을 지원한다.
 
 - Nested loop join
 - Hash join
@@ -8,7 +8,7 @@ PostgreSQL에서는 3가지의 Join을 지원한다.
 
 이 중 Nested loop join 은 가장 보편적인 Join 방식으로 그 작동 방식에는 결국 반복적인 스캔이 있다.  
 
-만약 반복적인 스캔에서 동일한 결과가 보장될때 이 결과를 캐시해두고 반복적인 스캔에서 계속 사용한다면 어떨까?    
+만약 반복적인 스캔의 하위 결과가 매번 같다면 이를 **캐시해두고 반복적인 스캔에서 계속 사용**한다면 어떨까?    
   
 PostgreSQL 14에서는 [memoize](https://postgresqlco.nf/doc/en/param/enable_memoize/) 의 도입으로 가능해졌다.  
   
@@ -16,8 +16,7 @@ PostgreSQL 14에서는 [memoize](https://postgresqlco.nf/doc/en/param/enable_mem
 
 ![aurora-versions](./images/aurora-versions.png)
 
-이번엔 해당 옵션과 그 전 버전인 PG 13과의 성능 비교를 진행해보자.
-
+이번엔 해당 옵션으로 인한 성능 개선을 알아보자.
 
 ## 성능 테스트
 
@@ -50,21 +49,21 @@ AWS Aurora PostgreSQL을 사용한다면 다음과 같이 파라미터 그룹에
 ```sql
 CREATE TABLE team AS
 SELECT team_no, team_no % 100 AS department_no
-FROM generate_series(1, 10000) AS team_no;
+FROM generate_series(1, 50000) AS team_no;
 
 CREATE TABLE users AS
-SELECT user_no, user_no % 20000 as department_no
+SELECT user_no, user_no % 20000 as department_no, now() as created_at
 FROM generate_series(1, 5000000) AS user_no;
 
 CREATE INDEX idx_user_department_no ON users (department_no);
 ```
 
 - `team`
-  - 10,000 row (1만건)
-  - 1 ~ 100개의 `department_no`
+  - 50,000 row (5만건)
+  - 1 ~ 100 사이의 `department_no`
 - `users`
   - 5,000,000 row (500만건)
-  - 1 ~ 20,000 개의 `department_no`
+  - 1 ~ 20,000 사이의 `department_no`
   - Join 성능 향상을 위한 index (`department_no`)
 
 위와 같이 테이블을 생성 한 뒤, 이제 실험을 진행한다.
@@ -113,6 +112,8 @@ END$$;
 
 PG 13에서는 다음과 같은 실행 계획을 가진다.
 
+![explain13](./images/explain13.png)
+
 그리고 실행 결과는 
 
 ![pg13_1](./images/pg13_1.png)
@@ -128,6 +129,12 @@ PG 14는 2가지 종류로 진행된다.
 - `enable_memoize` 를 `OFF` 한 경우
 
 #### enable_memoize ON
+
+실행계획은 다음과 같다.
+
+![explain14](./images/explain14.png)
+
+13버전과 달리 **Nested Loop**가 적용된다.
 
 ![pg14_1](./images/pg14_1.png)
 
@@ -195,6 +202,53 @@ Memoize 노드가 호출될 때마다 전달된 매개변수 값에 해당하는
 
 
 
+## lateral 성능 테스트
+
+위 실험을 하다보면 [lateral](https://www.heap.io/blog/postgresqls-powerful-new-join-type-lateral) 은 얼마나 성능 개선이 될지 궁금해진다.  
+Sub Query 간 상호 참조가 가능한 `lateral` 은 Cache 효율이 굉장히 잘 나올것 같다.
+
+> `lateral` 에 대해선 다음에 좀 더 자세히 정리할 예정이다.
+  
+다음의 쿼리로 13, 14버전에서 테스트해보자.
+
+```sql
+select *
+from (select team_no, department_no 
+    from team 
+    where team_no between 50 and 40000) t,
+lateral (
+    select user_no
+    from users
+    where t.department_no = users.department_no
+    ) u
+```
+
+이를 각 10회 수행한다.
+
+### lateral PG 13
+
+![lateral_plan13](./images/lateral_plan13.png)
+
+![pg13_2](./images/pg13_2.png)
+
+### lateral PG 14
+
+![lateral_plan14](./images/lateral_plan14.png)
+
+- 전체 반복 횟수: 39,951
+  - `loops: 39951` 
+- 
+
+![pg14_2](./images/pg14_2.png)
+
+테스트 결과 `lateral` 에서는 약 20%의 성능 개선이 있었다.  
+다만, **loop의 횟수가 많을수록 이 개선은 더 효과를 본다**.  
+현재는 약 3~4만회의 횟수를 반복하기 때문에 20%의 차이이지,  
+만약 수십만 loop가 필요한 경우에는 이보다 훨씬 더 효과를 볼 수 있을것 같다.
+
+![1000x](./images/1000x.png)
+
+(출처: [트위터](https://twitter.com/RPorsager/status/1455660236375826436))
 
 ## 마무리
 
