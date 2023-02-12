@@ -16,7 +16,7 @@ PostgreSQL 14에서
 
 그리고 AWS의 Aurora PostgreSQL 역시 PostgreSQL 14.x를 지원하고 있어 해당 옵션을 사용할 수 있다.
 
-![aurora-versions](./images/aurora-versions.png)
+![aurora-versions](images/aurora-versions.png)
 
 Memoize 로 성능 개선을 얼마나 얻을 수 있을지 한번 알아보자.
 
@@ -32,14 +32,14 @@ Memoize 로 성능 개선을 얼마나 얻을 수 있을지 한번 알아보자.
 SELECT current_setting('enable_memoize');
 ```
 
-![console](./images/console.png)
+![console](images/console.png)
 
 PG 14에서는 `enable_memoize` 의 **기본 옵션이 ON**이다.  
 그래서 별도의 설정 없이도 memoize 가 적용된다.   
   
 AWS Aurora PostgreSQL을 사용한다면 다음과 같이 파라미터 그룹에서 확인할 수 있다.
 
-![aurora-param](./images/aurora-param.png)
+![aurora-param](images/aurora-param.png)
 
 > Amazon Aurora (RDS) 에서 파라미터가 Boolean이면 1 (ON) or 0 (OFF) 으로 설정한다.
 
@@ -114,11 +114,11 @@ END$$;
 
 PG 13에서는 다음과 같은 실행 계획을 가진다.
 
-![explain13](./images/explain13.png)
+![explain13](images/explain13.png)
 
 그리고 실행 결과는 
 
-![pg13_1](./images/pg13_1.png)
+![pg13_1](images/pg13_1.png)
 
 - 1회 평균 `285ms` 
 - 10회 총합은 `2.855s` 이다.
@@ -134,11 +134,11 @@ PG 14는 2가지 종류로 진행된다.
 
 실행계획은 다음과 같다.
 
-![explain14](./images/explain14.png)
+![explain14](images/explain14.png)
 
 13버전과 달리 **Nested Loop**가 적용된다.
 
-![pg14_1](./images/pg14_1.png)
+![pg14_1](images/pg14_1.png)
 
 - 1회 평균 `263ms` 
 - 10회 총합은 `2.632s` 이다.
@@ -147,7 +147,7 @@ PG 14는 2가지 종류로 진행된다.
 
 만약 똑같이 PG 14 버전을 사용하지만 **enable_memoize을 off한다면** 어떻게 될까?
 
-![pg14_1_2](./images/pg14_1_2.png)
+![pg14_1_2](images/pg14_1_2.png)
 
 - 1회 평균 `281ms` 
 - 10회 총합은 `2.814s` 이다.
@@ -173,7 +173,7 @@ PostgreSQL에서는 memoize 가 활성화 된 경우, Memoize 노드가 호출�
 
 위에서 실험한 쿼리의 실행 계획을 살펴보자.
 
-![paln](./images/plan.png)
+![paln](images/plan.png)
 
 - Cache Key는 `team.department_no`
 - 총 4000번의 탐색 중
@@ -221,25 +221,25 @@ lateral (
 
 실행 계획은 다음과 같다.
 
-![lateral_plan13](./images/lateral_plan13.png)
+![lateral_plan13](images/lateral_plan13.png)
 
 memoize 가 지원되지 않는 13버전에서는 Nested Loop가 적용되지 않는다.
 
-![pg13_2](./images/pg13_2.png)
+![pg13_2](images/pg13_2.png)
 
 - 1회 평균 `2.358s` 
 - 10회 총합은 `23.587s` 이다.
 
 ### 3-2. lateral PG 14
 
-![lateral_plan14](./images/lateral_plan14.png)
+![lateral_plan14](images/lateral_plan14.png)
 
 - 전체 반복 횟수: 39,951
   - `loops`: 39,951 
   - `Cache Misses`: 100 
   - `Cache Hits`: 39,851
 
-![pg14_2](./images/pg14_2.png)
+![pg14_2](images/pg14_2.png)
 
 - 1회 평균 `2.09s` 
 - 10회 총합은 `20.914s` 이다.
@@ -250,7 +250,7 @@ memoize의 특성상 **loop 횟수가 많을수록 그 효율이 극대화된다
 현재는 약 3~4만회의 횟수를 반복하기 때문에 20%의 차이이지,  
 만약 **수십만 loop가 실행된 경우에는 이보다 훨씬 더 효과**를 볼 수 있을것 같다.
 
-![1000x](./images/1000x.png)
+![1000x](images/1000x.png)
 
 (1000배의 성능 개선이 되었다는 [트위터 짤](https://twitter.com/RPorsager/status/1455660236375826436)...)
 

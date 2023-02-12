@@ -10,7 +10,7 @@
 
 전체적인 구조는 다음과 같습니다.
 
-![intro](./images/intro.png)
+![intro](images/intro.png)
 
 > 한번 이렇게 구성하고 나면 이후에 CloudWatch에 적재된 슬로우 쿼리를 ElasticSearch로 보내어 대시보드를 통한 슬로우쿼리 모니터링 시스템도 쉽게 구축할 수 있게 됩니다.  
 > 이건 다음 시간에 소개드리겠습니다.
@@ -34,7 +34,7 @@
   * 단위는 ms / 즉, 1000로 지정할 경우 1초
   * 1000으로 할 경우 **1초이상 수행된 쿼리들은 모두 로그**로 남게된다.
 
-![parameter](./images/parameter.png)
+![parameter](images/parameter.png)
 
 이렇게 하시고 나서 최종 저장을 하시면 **DB의 재시작**과 함께 적용됩니다.
 
@@ -43,7 +43,7 @@
 
 DB의 재시작이 끝나시면 아래처럼 구성 -> 게시된 로그 -> `Postgresql` 항목으로 들어가서 로그를 볼 수 있습니다.
 
-![rds-log](./images/rds-log.png)
+![rds-log](images/rds-log.png)
 
 확인이 되셨으면 실제 로그가 남는지 확인해보겠습니다.
 
@@ -63,7 +63,7 @@ SELECT pg_sleep(2);
 * 구성 -> 게시된 로그 -> `Postgresql` 
 * 혹은 Cloudwatch의 로그그룹에서 `/aws/rds/instance/{RDS이름}/postgresql`  그룹에 들어가서 볼 수 있습니다.
 
-![slow-log](./images/slow-log.png)
+![slow-log](images/slow-log.png)
 
 이번 시간에는 슬로우쿼리 조건을 1초로 두고, **1초 이상은 모두 로그를 남기도록** 하였습니다.  
 상황에 따라 1초 보다 더 높은 값을 둬도되겠으나, 1초이상이면 충분히 슬로우 쿼리로 판단됩니다.  
@@ -85,7 +85,7 @@ SELECT pg_sleep(2);
 
 먼저 아래와 같이 간단하게 Lambda 함수를 생성합니다.
 
-![lambda1](./images/lambda1.png)
+![lambda1](images/lambda1.png)
 
 함수 코드는 간단하게 CloudWatch에서 넘어오는 데이터만 확인하기 위해 아래와 같이 작성합니다.
 
@@ -113,7 +113,7 @@ exports.handler = function(input, context) {
   
 이 코드가 작동하는지 검증하기 위해 테스트를 수행해봅니다.
 
-![lambda-test](./images/lambda-test.png)
+![lambda-test](images/lambda-test.png)
 
 * 템플릿을 `cloudwatch-logs` 하셔야만 Base64인코딩 + gzip 되어있는 테스트용 데이터가 만들어집니다.
 
@@ -172,7 +172,7 @@ RDS PostgreSQL의 쿼리 로그는 아래와 같은 형태로 전달됩니다.
 
 이 JSON을 [온라인 gzip 압축](https://www.multiutil.com/text-to-gzip-compress/) 사이트에서 압축하시면 테스트 데이터를 얻을 수 있습니다.
 
-![lambda-test-data](./images/lambda-test-data.png)
+![lambda-test-data](images/lambda-test-data.png)
 
 만약 이 과정이 귀찮다면 (혹은 **추가 가공 없이 그대로 쓰고싶다면**) 아래 JSON을 복사해서 그대로 테스트 데이터로 쓰시면 됩니다.
 ```bash
@@ -187,9 +187,9 @@ RDS PostgreSQL의 쿼리 로그는 아래와 같은 형태로 전달됩니다.
   
 Lambda 콘솔에서도 결과를 바로 볼 수도 있지만 **CloudWatch에서 Lambda 로그를 보고 싶으시면** 아래와 같이 확인해보실 수 도 있습니다.
 
-![lambda1](./images/lambda-log1.png)
+![lambda1](images/lambda-log1.png)
 
-![lambda2](./images/lambda-log2.png)
+![lambda2](images/lambda-log2.png)
 
 > CloudWatch -> 로그 -> 로그그룹 -> `/aws/lambda/{Lambda명}` 으로 이동해서 볼 수도 있습니다.
 
@@ -369,7 +369,7 @@ function request(options, data) {
 위의 테스트 데이터를 사용해서 그대로 다시 테스트를 수행하시면?  
 아래와 같이 테스트용 데이터를 기반으로 한 슬랙 메세지가 오는 것을 볼 수 있습니다.
 
-![slack1](./images/slack1.png)
+![slack1](images/slack1.png)
 
 여기까지 하셨다면 거의다 하셨습니다!  
 바로 CloudWatch 연동을 진행해보겠습니다.
@@ -381,11 +381,11 @@ CloudWatch와 Lambda 연동은 쉽습니다.
   
 먼저 RDS PostgreSQL의 로그 그룹으로 이동해서 해당 로그그룹 선택 -> 작업 -> 구독필터 -> Lambda 구독 필터 생성 을 차례로 선택합니다.
 
-![cloudwatch1](./images/cloudwatch1.png)
+![cloudwatch1](images/cloudwatch1.png)
 
 구독 필터 생성 화면에 들어가시게 되면, 2-1에서 만든 Lambda 함수를 대상에 등록합니다.
 
-![cloudwatch2](./images/cloudwatch2.png)
+![cloudwatch2](images/cloudwatch2.png)
 
 아래로 내려가보시면 로그형식이 나오는데, 여기서 로그형식은 기타를 선택합니다.  
   
@@ -393,15 +393,15 @@ CloudWatch와 Lambda 연동은 쉽습니다.
   
 구독 필터 이름이 없을 경우 생성이 불가능하니 꼭 식별 가능한 이름으로 입력합니다.
 
-![cloudwatch3](./images/cloudwatch3.png)
+![cloudwatch3](images/cloudwatch3.png)
 
 기존의 데이터에 대한 패턴 테스트까지 끝나셨다면 **스트리밍 시작** 버튼을 클릭하여 구독을 활성화 시킵니다.
 
-![cloudwatch4](./images/cloudwatch4.png)
+![cloudwatch4](images/cloudwatch4.png)
 
 그럼 아래와 같이 로그그룹의 구독 필터에 1개의 구독이 추가된 것을 볼 수 있습니다.
 
-![cloudwatch5](./images/cloudwatch5.png)
+![cloudwatch5](images/cloudwatch5.png)
 
 모든 설정이 끝났습니다.  
 이제 전체 테스트를 한번 해보겠습니다.  
@@ -413,4 +413,4 @@ SELECT pg_sleep(5);
 
 그럼 아래와 같이 슬랙 채널에 정식 알람이 오는 것을 확인할 수 있습니다.
 
-![slack2](./images/slack2.png)
+![slack2](images/slack2.png)

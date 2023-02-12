@@ -14,7 +14,7 @@ CloudWatch Event를 이용하여
 
 전체 구조는 다음과 같습니다.
 
-![intro](./images/intro.png)
+![intro](images/intro.png)
 
 자 그럼 바로 시작해보겠습니다.
 
@@ -28,11 +28,11 @@ Role (역할)을 생성하기 전에 Role이 사용할 Policy(정책)을 먼저 
   
 IAM -> 정책 -> 정책 생성으로 차례로 이동하신뒤,
 
-![policy1](./images/policy1.png)
+![policy1](images/policy1.png)
 
 JSON 탭을 클릭해 아래 정책들을 그대로 사용합니다.
 
-![policy2](./images/policy2.png)
+![policy2](images/policy2.png)
 
 ```javascript
 {
@@ -66,15 +66,15 @@ RDS의 시작/종료와 Lambda 로그를 남기는 것외에는 아무런 정책
 
 위에서 생성한 정책을 사용해서 Lambda가 사용할 역할을 생성합니다.  
 
-![role1](./images/role1.png)
+![role1](images/role1.png)
 
 Lambda를 선택하신뒤,
 
-![role2](./images/role2.png)
+![role2](images/role2.png)
 
 1-1에서 만든 역할을 검색해서 선택합니다.
 
-![role3](./images/role3.png)
+![role3](images/role3.png)
 
 이렇게 역할을 만드셨다면, 이젠 바로 Lambda를 생성할 수 있습니다.
 
@@ -84,7 +84,7 @@ Lambda를 선택하신뒤,
   
 ## 2-1. Lambda 함수 생성
 
-![lambda1](./images/lambda1.png)
+![lambda1](images/lambda1.png)
 
 * 기존 역할에서 1-2에서 만든 역할을 선택하시면 됩니다.
 
@@ -158,7 +158,7 @@ Lambda 함수가 생성되었으면, 해당 Lambda 함수가 잘 작동하는지
 
 Lambda의 테스트 탭으로 이동하신 뒤, 아래와 같이 JSON 데이터를 생성해봅니다.
 
-![test1](./images/test1.png)
+![test1](images/test1.png)
 
 ```javascript
 {  
@@ -174,7 +174,7 @@ Lambda의 테스트 탭으로 이동하신 뒤, 아래와 같이 JSON 데이터�
   
 저 같은 경우 아래 `ant-man-rdb-qa` DB를 대상으로 하기 때문에 `instances` 배열에는 `ant-man-rdb-qa` 를 사용합니다.
 
-![test2](./images/test2.png)
+![test2](images/test2.png)
 
 **action** 에는 다음의 값을 선택적으로 넣어서 실행해보시면 됩니다.
 
@@ -194,11 +194,11 @@ CloudWatch Rule(규칙) 은 총 2개가 만들어질 예정입니다.
 
 CloudWatch의 이벤트 -> 규칙 탭으로 이동합니다.
 
-![rule1](./images/rule1.png)
+![rule1](images/rule1.png)
 
 여기서 **일정**을 체크하여 Cron 표현식과 Lambda 함수를 작성합니다.
 
-![rule2](./images/rule2.png)
+![rule2](images/rule2.png)
 
 cron 표현식의 규칙은 다음과 같은데요.
 
@@ -208,7 +208,7 @@ cron(Minutes Hours Day-of-month Month Day-of-week Year)
 
 AWS 공식 문서에서 제공하는 샘플을 보시면서 원하는 스케줄을 작성하시면 됩니다.
 
-![cron1](./images/cron1.png)
+![cron1](images/cron1.png)
 
 * day-of-month 또는 day-of-week 값 중 하나는 반드시 물음표(?)여야 합니다.
 
@@ -217,7 +217,7 @@ AWS 공식 문서에서 제공하는 샘플을 보시면서 원하는 스케줄�
   
 저 같은 경우 [UTC-KST online converter](https://savvytime.com/converter/kst-to-utc)를 이용하곤합니다.
 
-![time](./images/time.png)
+![time](images/time.png)
 
 위 내용대로 **평일 20:00마다 실행**을 cron 표현식으로 작성하면 다음과 같습니다.
 
@@ -235,11 +235,11 @@ AWS 공식 문서에서 제공하는 샘플을 보시면서 원하는 스케줄�
 
 마지막으로 규칙 이름등을 입력해주시면 됩니다.
 
-![rule3](./images/rule3.png)
+![rule3](images/rule3.png)
 
 생성이 되시면 아래와 같이 신규 규칙이 추가된 것을 볼 수 있습니다.
 
-![rule4](./images/rule4.png)
+![rule4](images/rule4.png)
 
 ## 3-2. Start Rule
 
@@ -263,7 +263,7 @@ start 규칙의 cron은 다음과 같습니다.
 최종 테스트는 간단합니다.  
 CloudWatch의 cron을 잠깐 수정하여 **현재시간보다 2~3분뒤**에 실행되도록 한뒤, stop 혹은 start가 잘 수행되는지 검증하면 됩니다.  
   
-![test3](./images/test3.png)
+![test3](images/test3.png)
 
 
 

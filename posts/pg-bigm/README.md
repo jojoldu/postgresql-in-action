@@ -1,6 +1,6 @@
 # Amazon Aurora PostgreSQL 에서 pg_bigm 확장 사용하기
 
-![intro](./images/intro.png)
+![intro](images/intro.png)
 
 2021.06.17 드디어 Amazon Aurora PostgreSQL 에서 [pg_bigm](https://pgbigm.osdn.jp/pg_bigm_en-1-2.html)을 지원하게 되었습니다.
 
@@ -90,7 +90,7 @@ SELECT * FROM pg_extension;
 
 기본값으로는 `pg_bigm` 가 없는 것을 볼 수 있는데요.
 
-![extension1](./images/extension1.png)
+![extension1](images/extension1.png)
 
 아래 명령어로 모듈을 활성화시킵니다.
 
@@ -106,7 +106,7 @@ SELECT * FROM pg_extension;
 
 모듈이 활성화 된 것을 볼 수 있습니다.
 
-![extension2](./images/extension2.png)
+![extension2](images/extension2.png)
 
 이렇게만 하시면 이제 `pg_bigm`을 사용할 수 있습니다.
 
@@ -128,7 +128,7 @@ SELECT indexname, indexdef
  WHERE tablename = 'posts';
 ```
 
-![index1](./images/index1.png)
+![index1](images/index1.png)
 
 자 그리고 이제 해당 인덱스가 잘 적용되는지 보겠습니다.  
   
@@ -142,7 +142,7 @@ select * from posts2 where body like '%김영한%';
 
 인덱스를 전혀 활용하지 못하는 것을 볼 수 있습니다.
 
-![index3](./images/index3.png)
+![index3](images/index3.png)
 
 그리고 `pg_bigm` (`gin`) 인덱스가 적용된 테이블에서의 조회 쿼리 실행계획을 봅니다.
 
@@ -150,7 +150,7 @@ select * from posts2 where body like '%김영한%';
 select * from posts where body like '%김영한%';
 ```
 
-![index2](./images/index2.png)
+![index2](images/index2.png)
 
 보시는것처럼 `Bitmap Index Scan`이 적용되는 것을 볼 수 있습니다.
 
@@ -160,11 +160,11 @@ select * from posts where body like '%김영한%';
   
 **일반 인덱스가 적용된 경우**
 
-![index4](./images/index4.png)
+![index4](images/index4.png)
 
 **pg_bigm 인덱스가 적용된 경우**
 
-![index5](./images/index5.png)
+![index5](images/index5.png)
 
 2.7초 vs 0.4초로 대략 6배의 성능 차이가 발생했는데요.  
 아마도 더 많은 양의 텍스트와 Row를 등록했다면 더 많은 차이가 발생했을것으로 보입니다.
@@ -185,7 +185,7 @@ select * from posts where body like '%pg_bigm은 전체 텍스트 검색 성능�
 이때 `성능을 200%` 에서 `%`는 `like` 검색의 `%`가 아니라 실제 문자 `%`로 작동해야하는데요.  
 escapes하지 않으면 다음과 같이 `like` 검색의 `%` 로 작동하게 됩니다.
 
-![likequery1](./images/likequery1.png)
+![likequery1](images/likequery1.png)
 
 그래서 매번 아래와 같이 `escapes` 처리 (`\%`)를 합니다.
 
@@ -193,7 +193,7 @@ escapes하지 않으면 다음과 같이 `like` 검색의 `%` 로 작동하게 �
 select * from posts where body like '%pg_bigm은 전체 텍스트 검색 성능을 200\% 향상시켰습니다%';
 ```
 
-![likequery2](./images/likequery2.png)
+![likequery2](images/likequery2.png)
 
 물론 중간 문자열 검색이니 **앞뒤로는 % 추가를 잊지말아야 하구요**.  
   
@@ -210,7 +210,7 @@ select * from posts where body like '%pg_bigm은 전체 텍스트 검색 성능�
 select * from posts where body like likequery('pg_bigm은 전체 텍스트 검색 성능을 200% 향상시켰습니다');
 ```
 
-![likequery3](./images/likequery3.png)
+![likequery3](images/likequery3.png)
 
 ## 5. 마무리
 

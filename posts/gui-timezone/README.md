@@ -19,13 +19,13 @@ select now();
 
 그럼 아래와 같이 UTC로 `now()` 가 노출되는 것을 볼 수 있습니다.
 
-![1](./images/1.png)
+![1](images/1.png)
 
 (현재 한국 시간은 2021-04-24 10:19:06 입니다.)  
   
 실제 적재된 테이블의 컬럼값을 확인해도 아래와 같이 **UTC** 값 그대로 노출되는 것을 볼 수 있습니다.
 
-![2](./images/2.png)
+![2](images/2.png)
 
 현재 UTC 데이터 그대로 노출되는게 확인되었으니 이젠 Gui 도구를 설정해보겠습니다.
 
@@ -34,19 +34,19 @@ select now();
 당연한 얘기지만, 해당 시간 컬럼의 값은 `timestamp with time zone` 여야만 합니다.  
 (대부분 이걸 사용하시겠지만)  
   
-![3](./images/3.png)
+![3](images/3.png)
 
 DataGrip에서는 `해당 DataSource 설정` -> `Options` -> `Time zone` 항목으로 이동하여 `Asia/Seoul` 을 등록하시면됩니다.
 
-![4](./images/4.png)
+![4](images/4.png)
 
 ## to-be
 
 그럼 이제 **다시 Query Console**을 열어서 쿼리를 실행해봅니다.  
 (다시 열지않으면, 이전 세션이 유지되어 KST 적용이 안됩니다.)
 
-![5](./images/5.png)
+![5](images/5.png)
 
 테이블의 데이터까지 정상적으로 KST가 적용된 것을 확인할 수 있습니다.
 
-![6](./images/6.png)
+![6](images/6.png)

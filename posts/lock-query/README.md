@@ -11,13 +11,13 @@ AWS RDS를 사용하면 [성능 개선 도우미](https://aws.amazon.com/ko/rds/
   
 아래와 같이 처음 RDS 생성시 혹은 수정을 통해 설정이 가능합니다.
 
-![rds1](./images/rds1.png)
+![rds1](images/rds1.png)
 
 이렇게 성능 개선 도우미를 활성화시키면 성능과 관련된 여러가지 지표들을 손쉽게 모니터링할 수 있습니다.
 
-![rds2](./images/rds2.png)
+![rds2](images/rds2.png)
 
-![rds3](./images/rds3.png)
+![rds3](images/rds3.png)
 
 (이번에 이야기할 Lock 쿼리 역시 성능 개선 도우미를 통해 확인이 가능하기 때문에, 이를 기반으로 설명할 예정입니다.) 
   
@@ -29,17 +29,17 @@ AWS RDS를 사용하면 [성능 개선 도우미](https://aws.amazon.com/ko/rds/
   
 성능 개선 도우미를 활성화시켰다면 아래와 같이 RDS 데이터베이스 목록에서 **세션**에 해당하는 항목을 클릭해서 성능 개선 도우미 모니터링 화면으로 이동 가능합니다.
 
-![rds4](./images/rds4.png)
+![rds4](images/rds4.png)
 
 ## 2. Lock 쿼리 확인
 
 Lock 쿼리가 진행중이라면, 성능 개선 도우미에서 아래와 같이 Lock 지표가 계속해서 올라가는 것을 볼 수 있습니다.
 
-![cloudwatch1](./images/cloudwatch1.png)
+![cloudwatch1](images/cloudwatch1.png)
 
 그리고 해당 Lock 쿼리들이 무엇인지 역시 확인할 수 있습니다.
 
-![cloudwatch2](./images/cloudwatch2.png)
+![cloudwatch2](images/cloudwatch2.png)
 
 이렇게 Lock 쿼리들을 찾아냈다면 **해당 쿼리들을 종료만 시키면 될 것 같습니다**.
 
@@ -74,7 +74,7 @@ WHERE state = 'active'
 그렇지만,  
 이렇게 Lock 쿼리들을 취소시켜도 그 순간만 줄어들뿐 **다시 Lock쿼리들이 증가**하는데요.
 
-![cloudwatch3](./images/cloudwatch3.png)
+![cloudwatch3](images/cloudwatch3.png)
 
 이는 Lock의 원인이 되는 **근본 쿼리는 여전히 남아 있기 때문**입니다.
 
@@ -92,7 +92,7 @@ order by query_start;
 
 그럼 아래와 같이 **Lock외에 다른 쿼리가 있음**을 알 수 있는데요.
 
-![lock1](./images/lock1.png)
+![lock1](images/lock1.png)
 
 위 쿼리 확인 시간은 **23:30분**이였으니, 위 4개 쿼리는 **1시간째 Lock의 원인이 되어 실행중인 상태**였습니다.  
   
@@ -108,8 +108,8 @@ select pg_terminate_backend(pid);
 
 이후 다시 Lock 쿼리들을 조회해보시면 더이상 Lock 쿼리는 없는 것을 볼 수 있습니다.
 
-![lock2](./images/lock2.png)
+![lock2](images/lock2.png)
 
 성능 개성 도우미 지표 역시 더이상 Lock 지표가 나오지 않는 것을 확인할 수 있습니다.
 
-![cloudwatch4](./images/cloudwatch4.png)
+![cloudwatch4](images/cloudwatch4.png)

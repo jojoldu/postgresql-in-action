@@ -13,7 +13,7 @@ PostgreSQL은 버전별로 굉장히 많은 개선이 있다.
 
 PostgreSQL의 10 ~ 14버전 간 여러 기능 비교 중, 인덱스 & 제약조건에 관한 비교를 본다.
 
-![compare_index](./images/compare_index.png)
+![compare_index](images/compare_index.png)
 
 * [PostgreSQL feature Matrix](https://www.postgresql.org/about/featurematrix/)
 
@@ -50,18 +50,18 @@ LIMIT 24;
 
 ### 10.x
 
-![10_1](./images/10_1.png)
+![10_1](images/10_1.png)
 
 * **Bitmap Index Scan만 적용**되는 것을 볼 수 있다.
 * 총 수행시간도 988ms (약 **1초**)
 
-![10_1_explain](./images/10_1_explain.png)
+![10_1_explain](images/10_1_explain.png)
 
 ### 11.x 
 
 동일한 쿼리를 11버전에서 수행해본다.
 
-![11_1](./images/11_1.png)
+![11_1](images/11_1.png)
 
 * **Btree 인덱스가 제대로 적용**된 것을 볼 수 있다.
 * 총 수행시간도 **5ms** (기존 대비 약 200배 성능 향상)
@@ -84,28 +84,28 @@ WHERE (("status" = 'publish' AND "published_date" < now() AND "deleted_at" IS NU
 
 ### 10.x
 
-![10_2](./images/10_2.png)
+![10_2](images/10_2.png)
 
 * PK 인덱스가 선적용되어서 실제 더 좋은 효율을 자랑하는 다른 인덱스를 선택하지 못했다.
   * 조회 조건에 `"id" in (select "course_id" from "courses_levels" where "term_id" IN (777320, 1))` 가 있기 때문이다.
 * 총 수행시간은 **1.1초**
 
-![10_2_explain](./images/10_2_explain.png)
+![10_2_explain](images/10_2_explain.png)
 
 ### 11.x
 
-![11_2](./images/11_2.png)
+![11_2](images/11_2.png)
 
 * PK 인덱스가 아닌 courses_status_exposure_deleted_at 이라는 조회조건의 대부분이 포함된 인덱스를 선택했다
 * 총 수행시간은 **5ms** (약 **220배** 성능 향상)
 
-![11_2_explain](./images/11_2_explain.png)
+![11_2_explain](images/11_2_explain.png)
 
 ## 결론
 
 11버전으로 업데이트 이후, 2초이상의 쿼리들이 거의 대부분 사라졌다.  
 
-![result](./images/result.png)
+![result](images/result.png)
 
 PostgreSQL은 11, 12, 13, 14오면서 굉장한 성능 향상과 효율작업이 있었다.  
 

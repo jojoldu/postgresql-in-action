@@ -48,11 +48,11 @@ source ~/.bash_profile
 
 설치와 PATH 지정이 끝나셨으면 다시 `psql --version` 로 확인해봅니다.
 
-![install](./images/install.png)
+![install](images/install.png)
 
 설치가 잘되셨으면 한번 `psql`로 DB에 접속해봅니다.
 
-![connect](./images/connect.png)
+![connect](images/connect.png)
 
 
 ## 주의

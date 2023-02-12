@@ -1,6 +1,6 @@
 # 여러컬럼으로 Join 맺어야할 경우 인덱스 설계
 
-![1](./images/1.png)
+![1](images/1.png)
 
 실제 발생했던 쿼리)
 
@@ -51,13 +51,13 @@ Execution time: 37097.408 ms
 
 상세하게 보면, 테이블: `vouchers` 에서 **27초**, `users` 에서 **10초**가 수행되었다.
 
-![2](./images/2.png)
+![2](images/2.png)
 
 근데 여기서 그래프를 보면 vouchers는 **인덱스 스캔 인데도 28초**나 걸렸다.  
 왜그럴까?  
 이유는 **인덱스로 걸러지고 추가로 필터링 해야할 데이터가 아직도 많기 때문**이다.
 
-![3](./images/3.png)
+![3](images/3.png)
 
 문제가 되는 쿼리는 아래 1줄 영역이다
 
@@ -86,8 +86,8 @@ on vouchers (user_id, course_id, deleted_at);
 
 이후 다시 쿼리를 수행하고 실행계획을 보면?
 
-![4](./images/4.png)
+![4](images/4.png)
 
-![5](./images/5.png)
+![5](images/5.png)
 
 총 수행시간이 **0.093초** (93.ms)로 단축된 것을 확인할 수 있다. 

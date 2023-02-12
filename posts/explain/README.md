@@ -85,15 +85,15 @@ ANALYZE옵션이 사용될 때 명령문이 실제로 실행된다는 점에 유
 
 실행계획을 넣으시면
 
-![visual1](./images/visual1.png)
+![visual1](images/visual1.png)
 
 아래와 같이 실행 계획의 각 라인이 몇번째 순서인지 알 수 있습니다.
 
-![visual2](./images/visual2.png)
+![visual2](images/visual2.png)
 
 만약 `explain analyze` 를 이용한 쿼리 플랜 결과를 사용한다면 실제 수행시간도 표기 되기 때문에 이 중 가장 오래 걸린 작업부터 먼저 최적화 대상으로 삼으시면 됩니다.
 
-![visual3](./images/visual3.png)
+![visual3](images/visual3.png)
 
 > `ANALYZE` 는 실제 쿼리를 실행하기 때문에 혹시나 오랜 시간 수행되는 쿼리의 플랜을 확인할때는 서비스에 영향이 없게 주의해서 수행해야합니다.
 

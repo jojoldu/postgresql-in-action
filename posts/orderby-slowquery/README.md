@@ -17,17 +17,17 @@ ORDER BY "id" DESC
 LIMIT 30 OFFSET 0;
 ```
 
-![1](./images/1.png)
+![1](images/1.png)
 
 쿼리 자체가 복잡하고, 대상이 되는 테이블들의 데이터가 많아서 그런게 아닐까 싶지만 실제로는 `course` 를 지정해서 진행하기 때문에 전체 조회 결과는 10~100건 사이입니다.
 
-![2](./images/2.png)
+![2](images/2.png)
 
 (Limit 없이 전체 조회시 결과는 **총 8건**뿐)  
   
 그래서 `order by` 만 빼고 다시 수행해보면 **0.015초** 라는 기존 3~4초에 비해서는 **200~300배** 향상된 성능을 보여줍니다.
 
-![3](./images/3.png)
+![3](images/3.png)
 
 ## 2. 문제 분석
 
@@ -35,7 +35,7 @@ LIMIT 30 OFFSET 0;
   
 쉽게 짐작할 수 있겠지만, 실행계획을 보면 **선 정렬 -> 후 필터**를 하기 때문입니다.
 
-![4](./images/4.png)
+![4](images/4.png)
 
 즉, **400만건이 넘는 voucher를 id로 먼저 desc 정렬**시킨후, 그 뒤에 where 문을 적용해서 걸러내기 때문입니다.  
   
@@ -56,7 +56,7 @@ LIMIT 30 OFFSET 0;
   
 여기서는 **PK인덱스로 정렬에 대한 우선 순위를 낮추도록** 쿼리를 변경합니다.
 
-![5](./images/5.png)
+![5](images/5.png)
 
 ```sql
 select "vouchers"."id"
@@ -70,13 +70,13 @@ LIMIT 30 OFFSET 0;
 
 실제 실행계획을 보면
 
-![6](./images/6.png)
+![6](images/6.png)
 
 Sort가 거의 마지막에 수행됩니다.  
 (Limit이 마지막, Sort는 마지막 바로 직전)  
   
 수행해보면 Order by 없을때와 마찬가지로 0.0X초만에 결과가 출력됩니다.
 
-![7](./images/7.png)
+![7](images/7.png)
 
 

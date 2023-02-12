@@ -39,11 +39,11 @@ LIMIT 24 OFFSET 0;
     WHERE ("user_id" = 490237 AND "deleted_at" IS NULL))
 ```
 
-![ex1-1](./images/ex1-1.png)
+![ex1-1](images/ex1-1.png)
 
 <br/><br/>
 
-![ex1-2](./images/ex1-2.png)
+![ex1-2](images/ex1-2.png)
 
 
 이 `not in` 을 `left outer join` 으로 풀어보자
@@ -71,7 +71,7 @@ LIMIT 24 OFFSET 0;
 
 추가된 쿼리는 다음과 같다.
 
-![ex1-3](./images/ex1-3.png)
+![ex1-3](images/ex1-3.png)
 
 
 * 조건절에 해당하는 데이터를 임시 테이블로 뽑아 `left outer join` 으로 처리한 뒤,
@@ -80,11 +80,11 @@ LIMIT 24 OFFSET 0;
   
 실제 수행해보면
 
-![ex1-4](./images/ex1-4.png)
+![ex1-4](images/ex1-4.png)
 
 <br/><br/>
 
-![ex1-5](./images/ex1-5.png)
+![ex1-5](images/ex1-5.png)
 
 
 실행 결과와 성능이 준수하게 나오는 것을 볼 수 있다.  
@@ -92,6 +92,6 @@ LIMIT 24 OFFSET 0;
   
 혹시나 쿼리문 자체가 변경되어서 결과가 다를수 있기 때문에 결과 역시 검증해본다
 
-![ex1-compare](./images/ex1-compare.png)
+![ex1-compare](images/ex1-compare.png)
 
 결과 역시 동일한 것을 확인할 수 있다.
