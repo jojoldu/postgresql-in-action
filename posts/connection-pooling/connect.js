@@ -1,22 +1,23 @@
 const { Client } = require("pg");
 
-const client = new Client({
-  user: "사용자명",
-  host: "127.0.0.1",
+const config = {
+  host: "localhost",
+  user: "test",
   database: "test",
   password: "test",
   port: 5432,
-});
+};
 
 const timeName = 'client';
-
+test
 console.time(timeName);
 
-Array(100).map(async (_, i) => {
+Promise.all(Array(100).fill(0).map(async (_, i) => {
+  const client = new Client(config);
   await client.connect();
+  await client.query('SELECT NOW()');
   await client.end();
-});
+})).then(() => console.log('client end'));
 
 console.timeEnd(timeName);
-
 
