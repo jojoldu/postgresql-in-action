@@ -3,7 +3,7 @@ services:
     image: postgres:13
     ports:
       - '5432:5432'
-    container_name: nodejs-test-db
+    container_name: pg-test-db
     environment:
       - POSTGRES_DB=test
       - POSTGRES_USER=test
