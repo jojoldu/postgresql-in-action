@@ -9,7 +9,6 @@ const config = {
 };
 
 const timeName = 'client';
-test
 console.time(timeName);
 
 Promise.all(Array(100).fill(0).map(async (_, i) => {
