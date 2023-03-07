@@ -17,10 +17,36 @@ idle_in_transaction_session_timeout: 트랜잭션이 시작된 후, 지정된 �
 statement_timeout
 ```
 
+명령어
+
+```sql
+show statement_timeout;
+Alter database [db_name] set statement_timeout = 60000;
+```
+
+혹은 다음과 같이 현재 세션에 한해서만 적용 가능하다
+
+```sql
+set statement_timeout = 30000;
+```
+
 ## 트랜잭션 타임아웃
 
 ```sql
 idle_in_transaction_session_timeout
+```
+
+명령어
+
+```sql
+show idle_in_transaction_session_timeout;
+alter database [db_name] set idle_in_transaction_session_timeout = 60000;
+```
+
+혹은 다음과 같이 현재 세션에 한해서만 적용 가능하다
+
+```sql
+set idle_in_transaction_session_timeout = 60000;
 ```
 
 유휴 트랜잭션 상태의 연결은 다른 쿼리 또는 트랜잭션을 차단하는 잠금을 보유할 수 있다.  
