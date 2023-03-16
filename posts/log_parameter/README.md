@@ -1,6 +1,11 @@
 # PostgreSQL Log Parameter 설정
 
-로깅하려는 쿼리에 따라 og_statement 또는 log_min_duration_statement를 활성화할 수 있습니다. 로깅을 활성화하기 위해 두 파라미터를 모두 변경할 필요는 없습니다.
+로깅하려는 쿼리에 따라 log_statement 또는 log_min_duration_statement를 활성화할 수 있습니다. 
+
+## 주의할 점
+
+- `log_statement`를 `all` 혹은 `mod`로 설정하면 **DML 쿼리들의 duration이 출력되지 않는다**
+
 
 임계값(밀리초 단위)을 설정하려면 log_min_duration_statement를 수정합니다. 그러면 설정된 파라미터 값보다 더 오래 걸리는 모든 쿼리를 로깅할 수 있습니다. 예를 들어, log_min_duration_statement 값을 500으로 설정하면 Amazon RDS는 쿼리 유형에 상관없이 완료 시간이 0.5초보다 긴 모든 쿼리를 로깅합니다. 마찬가지로 이 파라미터를 2000으로 설정하면, Amazon RDS는 완료 시간이 2초보다 긴 모든 쿼리를 로깅합니다. 파라미터 값을 -1로 설정하면 파라미터가 비활성화되고 Amazon RDS는 완료 시간을 기준으로 쿼리를 로깅하지 않습니다. 파라미터 값을 0으로 설정하면 Amazon RDS가 모든 쿼리를 로깅합니다.
 참고: log_min_duration_statement 파라미터는 log_statement 파라미터에 종속되거나 이를 간섭하지 않습니다.
