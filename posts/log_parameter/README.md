@@ -2,6 +2,27 @@
 
 로깅하려는 쿼리에 따라 log_statement 또는 log_min_duration_statement를 활성화할 수 있습니다. 
 
+## 필수 로깅 파라미터
+
+- `log_temp_files`
+- `1024`
+- `Log_min_messages`
+- `error`
+- `log_lock_waits`
+- `1`
+- `log_statement`
+  - `ddl`
+- `log_min_duration_statement`
+  - `100` 혹은 `1000`
+- `rds.force_autovacuum_logging_level`
+  - `log`
+- `log_autovacuum_min_duration`
+  - `1000`
+- `shared_preload_libraries`
+  - `auto_explain`
+- `auto_explain.log_min_duration`
+  - `1000`
+
 ## 주의할 점
 
 - `log_statement`를 `all` 혹은 `mod`로 설정하면 **DML 쿼리들의 duration이 출력되지 않는다**
