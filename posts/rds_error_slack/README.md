@@ -1,4 +1,4 @@
-# RDS Error, Lock 발생시 Slack 발송
+# AWS RDS PostgreSQL에서 Slow, Error, DDL 쿼리 발생시 Slack 발송하기
 
 
 ```

@@ -155,6 +155,38 @@ Nested Loop  (cost=1.40..74738.03 rows=16154 width=8) (actual time=1.940..3420.2
 
 위에서 언급한 `auto_explain.log_min_duration` 와 `shared_preload_libraries` 역시 항상 함께 설정한다.
 
+### log_error_verbosity
+
+권장: `verbose`
+
+> 단, 본인들 데이터베이스의 로그양을 보고 결정한다.
+
+서버 로그에서 오류 메시지의 상세 수준을 조절하는 옵션
+크게 3가지 값으로 구분된다.
+
+- `terse`
+  - 간단한 오류 메시지를 기록합니다. 
+  - 각 오류에 대해 오류 코드와 짧은 메시지만 출력합니다.
+- `default` (기본값)
+  - 상세한 오류 메시지를 기록 
+  - 오류 코드, 짧은 메시지, 상세 메시지, 힌트, 컨텍스트 및 위치 정보가 포함
+- `verbose` 
+  - 모든 가능한 오류 정보를 기록 
+  - `default` 와 동일한 정보에 추가로 SQL 명령어와 서버 내부의 오류 진단 정보를 포함합니다.
+
+위 옵션에서 `default`로 설정하면 다음과 같이 `ERROR` 메세지만 로그로 남는다.
+
+```sql
+ERROR:  duplicate key value violates unique constraint "index_users_on_lower_email_text_unique_key"
+```
+
+다만, 이것만으로는 정확히 에러를 알 수가 없고 다음과 같이 `DETAIL` 정보도 함께 알고 싶다면 `verbose` 로 설정해야한다.
+
+```sql
+DETAIL:  Key (lower(email::text), unique_key)=(admin-user@abc.in, 0) already exists.
+: INSERT INTO "users" ("email", "encrypted_password", "created_at", "updated_at", "name", "uuid") values  ('admin-user@abc.in', '$2a$11$LauwBMBUwhF1NUZMqjQ9NuScki9rnoNdJb.t4pWdK5MjJm7KEmtsS', '2021-11-25 11:23:05.089084', '2021-11-25 11:23:05.089084', 'Praveen Kumar', 'L4iNSd')
+```
+
 ### rds.force_admin_logging_level
 
 권장: `log`
@@ -162,6 +194,7 @@ Nested Loop  (cost=1.40..74738.03 rows=16154 width=8) (actual time=1.940..3420.2
 - 마스터 사용자의 활동들에 대한 로깅 레벨
 - 예를 들어, 마스터 사용자의 비밀번호를 잊어버려서 재설정하려는 경우 설정한 로깅 레벨에 맞게 로그를 남긴다. 
 - 마스터 관리자가 실행한 모든 쿼리를 로그로 남겨준다
+
 
 ## 주의할 점
 
