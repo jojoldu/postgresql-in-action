@@ -7,9 +7,16 @@
 > 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 존재한다.
 
 
-## 
-
 ![intro](./images/intro.png)
+
+## 1. 구조
+
+가능하면 AWS Lambda는 하나의 기능만 담당하도록 구성하고 싶었다.  
+하지만 CloudWatach의 로그스트림에서는 **구독 필터를 2개밖에 할당하지 못한다**.  
+즉, Slow, Error, DDL 등 종류별로 Lambda를 만들어서 구독을 시킬 수가 없다.  
+그래서 하나의 Lambda에서 로그 종류를 구분해서 각각 Slack 채널에 전송하도록 구성해야한다.
+
+## 2. CloudWatch Stream 구성
 
 ```
 [w1, w2, w3!="*DETAIL*", w4!="*connection*" && w4!="*disconnection*" && w4!="*configuration file*" && w4!="*changed to*" && w4!="*cannot be changed*" && w4!="*setsockopt(TCP_KEEPIDLE) failed*"]
