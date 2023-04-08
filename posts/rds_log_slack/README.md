@@ -1,11 +1,15 @@
 # AWS RDS PostgreSQL에서 Slow, Error, DDL 쿼리 발생시 Slack 발송하기
 
 [이전 글](https://jojoldu.tistory.com/570) 에서 RDS에서 Slow Query가 발생했을때 Slack을 발송하는 것을 구현했다.  
-이번 시간에는 해당 코드를 발전시켜서 **Slow, Error, DDL 쿼리들을 각각의 채널에 발송**시키도록 Lambda 코드를 개선해본다.
+이번 시간에는 해당 코드를 발전시켜서 **Slow, Error, DDL 쿼리들을 각각의 채널에 발송**시키도록 Lambda 코드를 개선한다.
 
 > 여기에서는 기본적인 Node.js 사용법 정도는 알고 있다는 것을 전재로 한다.
 > 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 존재한다.
 
+
+## 
+
+![intro](./images/intro.png)
 
 ```
 [w1, w2, w3!="*DETAIL*", w4!="*connection*" && w4!="*disconnection*" && w4!="*configuration file*" && w4!="*changed to*" && w4!="*cannot be changed*" && w4!="*setsockopt(TCP_KEEPIDLE) failed*"]
