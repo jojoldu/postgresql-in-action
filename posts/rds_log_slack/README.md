@@ -4,17 +4,26 @@
 이번 시간에는 해당 코드를 발전시켜서 **Slow, Error, DDL 쿼리들을 각각의 채널에 발송**시키도록 Lambda 코드를 개선한다.
 
 > 여기에서는 기본적인 Node.js 사용법 정도는 알고 있다는 것을 전재로 한다.
-> 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 존재한다.
-
-
-![intro](./images/intro.png)
+> 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 있다.
 
 ## 1. 구조
 
-가능하면 AWS Lambda는 하나의 기능만 담당하도록 구성하고 싶었다.  
-하지만 CloudWatach의 로그스트림에서는 **구독 필터를 2개밖에 할당하지 못한다**.  
+가능하면 AWS Lambda는 **각각 하나의 기능만 담당**하도록 구성하고 싶었다.  
+하지만 CloudWatach의 로그 스트림에서는 **구독 필터를 2개밖에 할당하지 못한다**.  
+
+![filter](./images/filter.png)
+
 즉, Slow, Error, DDL 등 종류별로 Lambda를 만들어서 구독을 시킬 수가 없다.  
-그래서 하나의 Lambda에서 로그 종류를 구분해서 각각 Slack 채널에 전송하도록 구성해야한다.
+그래서 하나의 Lambda에서 로그 종류를 구분해서 각각 Slack 채널에 전송하도록 구성해야한다.  
+
+물론 **하나의 Lambda가 Gateway가 되어 각각의 Lambda를 호출하도록 구성**할 수도 있다.  
+다만, 그렇게되면 Lambda와 Lambda 사이에 메세지 유실이 되지 않기 위해 SQS와 같은 메세지큐를 도입해야하는데, 그렇게까지 확장해서 하는 것은 회사 규모에 따라 과하다.  
+단일 Lambda에서 구축하면 Lambda 사이에서의 메세지 유실 걱정을 하지 않으면서도 빠르게 구축 가능하다.  
+  
+그래서 현재 팀 규모가 크지 않을때를 위해 다음과 같이 간단한 구조로 진행한다.
+
+
+![intro](./images/intro.png)
 
 ## 2. CloudWatch Stream 구성
 
