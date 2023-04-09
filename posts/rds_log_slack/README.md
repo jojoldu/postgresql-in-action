@@ -3,8 +3,7 @@
 [이전 글](https://jojoldu.tistory.com/570) 에서 RDS에서 Slow Query가 발생했을때 Slack을 발송하는 것을 구현했다.  
 이번 시간에는 해당 코드를 발전시켜서 **Slow, Error, DDL 쿼리들을 각각의 채널에 발송**시키도록 Lambda 코드를 개선한다.
 
-> 여기에서는 기본적인 Node.js 사용법 정도는 알고 있다는 것을 전재로 한다.
-> 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 있다.
+> 이후에 이 코드는 [Serverless](https://www.serverless.com/) 등의 프레임워크로 교체될 예정이다.
 
 ## 1. 구조
 
@@ -25,15 +24,22 @@
 
 ![intro](./images/intro.png)
 
-## 2. CloudWatch Stream 구성
+## 2. Lambda 함수 생성
 
-```
-[w1, w2, w3!="*DETAIL*", w4!="*connection*" && w4!="*disconnection*" && w4!="*configuration file*" && w4!="*changed to*" && w4!="*cannot be changed*" && w4!="*setsockopt(TCP_KEEPIDLE) failed*"]
-```
+여기에서는 기본적인 Node.js 사용법 정도는 알고 있다는 것을 전재로 한다.
+AWS Lambda와 CloudWatch 로그를 연동하는 방법은 [이전 글](https://jojoldu.tistory.com/570) 에서 자세히 설명한다.  
+이 글에서는 주요 부분들만 설명한다.
 
-```
-"LOG" "duration"
-```
+
+> 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 있다.
+
+### 2-1. 함수 배포
+
+![lambda1](./images/lambda1.png)
+
+팀에서 이미 사용중인 Lambda Role이 있다면 해당 Role을 선택하고 없다면 기본 Role을 선택한다.
+
+![lambda2](./images/lambda2.png)
 
 ```js
 import https from 'https';
@@ -114,6 +120,7 @@ export class Message {
     }
 
     return match[1]
+      .replace('00000: ', '')
       .replace('execute <unnamed>: ', '')
       .replace(/^duration:\s+\d+\.\d+\s+ms\s+/, '')
       .replace('statement: ', '');
@@ -283,7 +290,30 @@ export async function request(options, data) {
     req.end();
   });
 }
+
 ```
 
-## 테스트 코드
+
+### 2-2. 테스트 코드
+
+
+
+## 3. CloudWatch Stream 구성
+
+만들어진 Lambda와 연동하기 위해 로그 필터를 구성해보자.  
+RDS의 CloudWatch 로 
+
+![filter1](./images/filter1.png)
+
+
+
+![filter2](./images/filter2.png)
+
+```
+[w1, w2, w3!="*DETAIL*", w4!="*connection*" && w4!="*disconnection*" && w4!="*configuration file*" && w4!="*changed to*" && w4!="*cannot be changed*" && w4!="*setsockopt(TCP_KEEPIDLE) failed*"]
+```
+
+```
+"LOG" "duration"
+```
 
