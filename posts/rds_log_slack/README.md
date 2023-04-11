@@ -41,6 +41,12 @@ AWS Lambda와 CloudWatch 로그를 연동하는 방법은 [이전 글](https://j
 
 ![lambda2](./images/lambda2.png)
 
+Lambda 함수 코드를 작성 전에, **각 Query 종류에 따라 Slack 채널을 구분할 수 있도록** Lambda의 환경변수에서 슬랙 채널을 관리한다.
+
+![lambda3](./images/lambda3.png)
+
+Lambda 함수의 전체 코드는 다음과 같다.
+
 ```js
 import https from 'https';
 import zlib from 'zlib';
@@ -293,10 +299,26 @@ export async function request(options, data) {
 
 ```
 
+각각의 function들은 다음과 같은 역할을 한다.
+
+- `WEB_HOOKS`
+  - 각 SQL 들의 종류에 따라 Slack Webhook가 다를 수 있기 때문에 각 종류에 맞는 Slack 채널을 Lambda 환경변수에서 관리하고 이를 코드에서 사용한다.
+- `sendMessages`
+  - 로그들의 최종 변환 객체인 `Message` 들을 Slack으로 보내는 Main 함수
+- `Message`
+  - 로그데이터를 파싱하여 Slack에 보내고자 하는 메세지 객체로 만드는 클래스
+- `KstTime`
+  - UTC 시간 데이터를 식별가능한 KST 시간 객체로 변환하는 클래스
+- `slackMessage`
+  - 전달받은 `Message` 객체를 Slack 으로 보낼 수 있는 형태로 변환하는 함수
+- `send` 
+  - `request`를 이용해 Slack Webhook에 메세지를 전송한다.
+- `request`
+  - callback만 지원하는 https 모듈을 async/await를 사용할 수 있도록 Promise 객체로 반환
+
 
 ### 2-2. 테스트 코드
 
-아래에서 사용되는 테
 
 ```js
 export const event_slow = {
@@ -433,19 +455,27 @@ describe('rds-logs-slack', () => {
 ## 3. CloudWatch Stream 구성
 
 만들어진 Lambda와 연동하기 위해 로그 필터를 구성해보자.  
-RDS의 CloudWatch 로 
+RDS의 CloudWatch 로 이동하여 Lambda 구독 필터를 생성한다.
 
 ![filter1](./images/filter1.png)
 
-
+다른 것은 기존대로 작성해도 무방하나, 필터 패턴은 **본인의 RDS 로그 패턴에 맞게** 사용한다.
 
 ![filter2](./images/filter2.png)
+
+
+아래 항목은 각종 RDS 알람에서는 받고 싶지 않은 내용들을 필터링 한 것이다.
 
 ```
 [w1, w2, w3!="*DETAIL*", w4!="*connection*" && w4!="*disconnection*" && w4!="*configuration file*" && w4!="*changed to*" && w4!="*cannot be changed*" && w4!="*setsockopt(TCP_KEEPIDLE) failed*"]
 ```
 
-```
-"LOG" "duration"
-```
+물론 모든 로그를 Lambda가 받아서 필요한 것만 보내도 되지만, 이렇게 되면 Lambda 비용이 너무 급증하기 때문에 가능하면 알람 대상이 아닌 로그들은 구독 필터에서 걸러주는 것이 좋다.
 
+![filter3](./images/filter3.png)
+
+모든 설정이 끝났다.
+Slow, Error, DDL 쿼리들을 실행해본다.
+그럼 아래와 같이 각 지정된 슬랙 채널에 정식 알람이 오는 것을 확인할 수 있다.
+
+![final](./images/final.png)
