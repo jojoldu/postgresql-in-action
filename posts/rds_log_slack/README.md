@@ -317,8 +317,21 @@ export async function request(options, data) {
   - callback만 지원하는 https 모듈을 async/await를 사용할 수 있도록 Promise 객체로 반환
 
 
-### 2-2. 테스트 코드
+해당 함수를 Lambda 테스트로 테스트를 해본다.  
 
+> 자세한 테스트 방법은 [기존 글](https://jojoldu.tistory.com/570#2-1-lambda-%ED%95%A8%EC%88%98-%EC%83%9D%EC%84%B1)을 참고해본다.
+### 2-2. 테스트 코드
+  
+> 이 부분은 필요하면 진행하고, 필요 없다면 굳이 진행할 필요는 없다.
+
+Lambda의 테스트로 함수를 검증하기에는 시간이 너무 소요된다고 생각할 수 있다.    
+빠르게 각각의 함수들을 테스트 하기 위해서 실제 로컬 프로젝트에서 Jest로 각 함수들을 검증해보는 것도 좋다.  
+  
+아래는 위에서 만든 Lambda 함수를 간단하게 Jest로 검증하기 위한 테스트 코드이다.
+
+> 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 있다.
+  
+**test/data.js**
 
 ```js
 export const event_slow = {
@@ -339,6 +352,10 @@ export const event_error = {
   "message": '2023-03-22 08:46:36 UTC:222.99.194.226(60346):test@antman:[30301]:ERROR:  update or delete on table "users" violates foreign key constraint "carts_user_id_foreign" on table "carts"',
 };
 ```
+
+이 테스트 데이터를 가지고 각 함수들을 검증해본다.
+
+**test/app.spec.js**
 
 ```js
 import {
@@ -452,6 +469,7 @@ describe('rds-logs-slack', () => {
 });
 ```
 
+각 기능들이 정상작동하는 것도 확인이 되었다면, Lambda 함수를 생성 완료한다.
 ## 3. CloudWatch Stream 구성
 
 만들어진 Lambda와 연동하기 위해 로그 필터를 구성해보자.  
@@ -463,16 +481,26 @@ RDS의 CloudWatch 로 이동하여 Lambda 구독 필터를 생성한다.
 
 ![filter2](./images/filter2.png)
 
-
 아래 항목은 각종 RDS 알람에서는 받고 싶지 않은 내용들을 필터링 한 것이다.
 
 ```
 [w1, w2, w3!="*DETAIL*", w4!="*connection*" && w4!="*disconnection*" && w4!="*configuration file*" && w4!="*changed to*" && w4!="*cannot be changed*" && w4!="*setsockopt(TCP_KEEPIDLE) failed*"]
 ```
 
-물론 모든 로그를 Lambda가 받아서 필요한 것만 보내도 되지만, 이렇게 되면 Lambda 비용이 너무 급증하기 때문에 가능하면 알람 대상이 아닌 로그들은 구독 필터에서 걸러주는 것이 좋다.
+이대로 사용해도 무방하나, 본인 시스템의 로그에서 받고 싶은것들이 무엇인지 패턴 테스트를 해보고 등록한다.  
+  
+로그 필터 패턴에서는 **몇 초이상의 쿼리를 걸러내는건 하지 않는다**.  
+패턴만으로 몇초이상인지 구분하기가 쉽지 않고,  
+슬로우 쿼리의 기준은 시스템이 고도화될수록 점점 낮아지기 때문이다.  
+(처음엔 5초였다가, 쿼리가 개선될수록 4초, 3초, 2초이상이면 SlowQuery로 판단하는 등)  
+  
+모든 로그를 Lambda가 받아서 필요한 것만 보내도 되지만, 이렇게 되면 Lambda 비용이 너무 급증하기 때문에 가능하면 알람 대상이 아닌 로그들은 구독 필터에서 걸러주는 것이 좋다.  
+  
+패턴 등록 후, 위에서 만들었던 Lambda 함수를 선택한다.
 
 ![filter3](./images/filter3.png)
+
+## 4. 최종 점검
 
 모든 설정이 끝났다.
 Slow, Error, DDL 쿼리들을 실행해본다.
