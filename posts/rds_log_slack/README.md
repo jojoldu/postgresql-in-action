@@ -1,7 +1,7 @@
 # AWS RDS PostgreSQL에서 Slow, Error, DDL 쿼리 발생시 Slack 발송하기
 
 [이전 글](https://jojoldu.tistory.com/570) 에서 RDS에서 Slow Query가 발생했을때 Slack을 발송하는 것을 구현했다.  
-이번 시간에는 해당 코드를 발전시켜서 **Slow, Error, DDL 쿼리들을 각각의 채널에 발송**시키도록 Lambda 코드를 개선한다.
+이번 시간에는 해당 코드를 발전시켜서 **Slow, Error, DDL 쿼리들을 각각의 채널에 발송**시키도록 Lambda 코드를 개선해보자.
 
 > 이후에 이 코드는 [Serverless](https://www.serverless.com/) 등의 프레임워크로 교체될 예정이다.
 
@@ -13,7 +13,7 @@
 ![filter](./images/filter.png)
 
 즉, Slow, Error, DDL 등 종류별로 Lambda를 만들어서 구독을 시킬 수가 없다.  
-그래서 하나의 Lambda에서 로그 종류를 구분해서 각각 Slack 채널에 전송하도록 구성해야한다.  
+그래서 **하나의 Lambda에서 로그 종류를 구분해서 각각 Slack 채널에 전송**하도록 구성해야한다.  
 
 물론 **하나의 Lambda가 Gateway가 되어 각각의 Lambda를 호출하도록 구성**할 수도 있다.  
 다만, 그렇게되면 Lambda와 Lambda 사이에 메세지 유실이 되지 않기 위해 SQS와 같은 메세지큐를 도입해야하는데, 그렇게까지 확장해서 하는 것은 회사 규모에 따라 과하다.  
@@ -21,19 +21,21 @@
   
 그래서 현재 팀 규모가 크지 않을때를 위해 다음과 같이 간단한 구조로 진행한다.
 
-
 ![intro](./images/intro.png)
+
+좀 더 제대로 구현하고자 한다면 메세지큐 등을 도입해도 된다.
 
 ## 2. Lambda 함수 생성
 
-여기에서는 기본적인 Node.js 사용법 정도는 알고 있다는 것을 전재로 한다.
-AWS Lambda와 CloudWatch 로그를 연동하는 방법은 [이전 글](https://jojoldu.tistory.com/570) 에서 자세히 설명한다.  
-이 글에서는 주요 부분들만 설명한다.
-
+Lambda 코드는 가장 무난한 Node.js 로 진행한다 (2023.04 현재 18.x 버전을 Lambda 에서 쓸 수 있다.)  
+  
+AWS Lambda와 CloudWatch 로그를 연동하는 방법은 [이전 글](https://jojoldu.tistory.com/570) 에서 자세히 설명하고 있어서, 이 글에서는 주요 변경 부분들만 소개한다.
 
 > 전체 코드는 [Github](https://github.com/jojoldu/lambda-in-action/tree/master/rds-logs-one-slack) 에 있다.
 
 ### 2-1. 함수 배포
+
+AWS Lambda 페이지로 이동하여 함수를 생성한다.
 
 ![lambda1](./images/lambda1.png)
 
@@ -41,11 +43,23 @@ AWS Lambda와 CloudWatch 로그를 연동하는 방법은 [이전 글](https://j
 
 ![lambda2](./images/lambda2.png)
 
-Lambda 함수 코드를 작성 전에, **각 Query 종류에 따라 Slack 채널을 구분할 수 있도록** Lambda의 환경변수에서 슬랙 채널을 관리한다.
+생성된 함수에서 가장 먼저 해야할 일은 **환경 변수**를 설정하는 것이다.  
+  
+해당 환경 변수는 **Query 로그 종류에 따라 다르게 수신 받을 슬랙 채널의 웹훅**을 등록한다.  
 
 ![lambda3](./images/lambda3.png)
 
-Lambda 함수의 전체 코드는 다음과 같다.
+이 글에서는 총 3개의 채널이 존재한다.
+
+- DDL
+- SLOW
+- ERROR
+
+이 변수에 따라 각각의 채널 웹훅을 등록한다.  
+
+> 슬랙 채널의 웹훅을 등록하는 방법은 [이 글](https://jojoldu.tistory.com/552)을 참고하면 된다.
+
+이렇게 만들어진 환경 변수를 사용하여 알람을 보낼 Lambda 함수의 전체 코드는 다음과 같다.
 
 ```js
 import https from 'https';
