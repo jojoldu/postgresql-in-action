@@ -21,6 +21,20 @@ Craig Ringer가 언급 했듯이 PostgreSQL은 오래 전부터 잠금 없이 �
 
 오래전부터 PostgreSQL은 테이블의 스키마를 변경하는 것이지만, 최신 데이터베이스는 이 작업을 거의 즉시 수행할 수 있을 만큼 충분히 정교합니다. 테이블의 기존 표현을 다시 작성하는 대신(따라서 기존의 모든 데이터를 막대한 비용을 들여 복사해야 함), 새 열에 대한 정보가 시스템 카탈로그에 추가되므로 비용이 저렴합니다. 따라서 새 열에 대한 값으로 새 행을 작성할 수 있으며, 시스템은 이전에 값이 없었던 현재 행에 대해 NULL을 반환할 수 있을 만큼 똑똑합니다.
 
+### 성능비교
+
+```sql
+CREATE TABLE team AS
+SELECT team_no, team_no % 100 AS department_no
+FROM generate_series(1, 50000000) AS team_no;
+```
+#### PostgreSQL 10
+
+#### PostgreSQL 11
+
+#### PostgreSQL 12
+
+#### PostgreSQL 13
 ## Alter Table with Default Value
 
 [PostgreSQL 11의 릴리즈 노트](https://www.postgresql.org/docs/11/release-11.html) 를 보면 **Alter Table에 기본값이 포함되어도 빠르게 생성할 수 있다**는 내용이 나온다.
