@@ -28,6 +28,27 @@ CREATE TABLE team AS
 SELECT team_no, team_no % 100 AS department_no
 FROM generate_series(1, 50000000) AS team_no;
 ```
+
+- 5천만건
+
+```sql
+SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
+```
+
+![size](./images/table_size.png)
+
+**alter table**
+
+```sql
+ALTER TABLE team ADD COLUMN credits bigint;
+```
+
+**alter table with default value**
+
+```sql
+ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
+```
+
 #### PostgreSQL 10
 
 #### PostgreSQL 11
