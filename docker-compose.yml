@@ -1,6 +1,8 @@
 services:
   db:
     image: postgres:10
+    command: >
+      -c max_wal_size=2GB
     ports:
       - '5432:5432'
     container_name: pg-test-db
