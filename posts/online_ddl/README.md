@@ -3,6 +3,8 @@
 Aurora MySQL 5.7까지만 써본 경험에서 Online DDL 은 여전히 부담스럽다.  
 그럼에도 수억건의 테이블에 DDL을 수행하는 것은 언제나 서비스 운영시에 필요한 사항이다.
 
+사내의 PostgreSQL DB를 10에서 11로 업그레이드하면서 `Alter Table`에 대한 부담이 많이 줄었다.
+
 
 데이터가 많은 만큼 시간소요 예측도 힘들고 만약 작업이 실패하는 경우 rollback 작업에 따른 위험도도 크기 때문입니다.
 
@@ -26,7 +28,7 @@ Craig Ringer가 언급 했듯이 PostgreSQL은 오래 전부터 잠금 없이 �
 ```sql
 CREATE TABLE team AS
 SELECT team_no, team_no % 100 AS department_no
-FROM generate_series(1, 50000000) AS team_no;
+FROM generate_series(1, 10000000) AS team_no;
 ```
 
 - 5천만건
@@ -43,11 +45,15 @@ SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
 ALTER TABLE team ADD COLUMN credits bigint;
 ```
 
+![10_1](./images/10_1.png)
+
 **alter table with default value**
 
 ```sql
 ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
 ```
+
+![10_2](./images/10_2.png)
 
 #### PostgreSQL 10
 

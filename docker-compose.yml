@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:10
+    image: postgres:11
     command: >
       -c max_wal_size=2GB
     ports:
