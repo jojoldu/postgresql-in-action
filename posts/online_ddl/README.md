@@ -3,25 +3,27 @@
 Aurora MySQL 5.7까지만 써본 경험에서 Online DDL 은 여전히 부담스럽다.  
 그럼에도 대량의 데이터가 쌓인 테이블에 DDL을 수행하는 것은 서비스를 운영하다보면 피할 수 없다.  
   
-100GB 이상의 테이블에 Online DDL로 컬럼을 추가해도 1시간이 넘도록 수행되던 경험을 해보면 가능한 기존 테이블에 컬럼을 추가하는 등의 DDL 작업은 피하고 싶다.  
+100GB 이상의 테이블에 Online DDL로 컬럼을 추가해도 1시간이 넘도록 수행되던 경험을 해보면 가능한 기존 테이블에 컬럼을 추가하는 등의 DDL 작업은 피하고 싶어진다.    
 
-MySQL과 다르게 PostgreSQL에서는 오래 전부터 일부 ALTER 작업에 대해서는 잠금 없는 변경이 가능했다.  
+다만, MySQL과 다르게 PostgreSQL에서는 오래 전부터 **일부 ALTER 작업에 대해서는 잠금 없는 변경**이 가능하다.  
 
-Online DDL 작업시 meta data를 저장하는 **시스템 카탈로그에 추가된 정보만 반영하기 때문에** 아주 빠른 작업이 가능하다.  
+이는 MySQL에서는 **테이블 구조를 변경할때 전체 테이블의 데이터를 새로운 구조로 복사하는 방식**을 취해서 테이블의 크기가 큰 경우 오래 걸리는 것과 다르게 PostgreSQL에서는 테이블 구조 변경 작업시 **meta data를 저장하는 시스템 카탈로그에 추가된 정보만 반영한다**.  
+즉, 테이블 데이터를 새로 복사하지 않고 메타데이터만 업데이트 하기 때문에 테이블의 크기와 관계 없이 빠른 작업이 가능하다.  
 
-그리고 11버전 부터는 `default value` & `Not Null` 값을 포함한 컬럼 추가에서도 성능 개선이 있었다.
+> 물론 여기에 더하여 PostgreSQL에서는 Alter Table은 트랜잭션을 지원해서 변경사항을 롤백할 수 있다거나 MVCC로 인해 테이블 변경 작업에도 테이블 읽기가 차단되지 않는 동시성 등의 장점이 존재한다.
 
-그래서 PostgreSQL을 사용하고나서는 컬럼 추가에 대한 부담이 많이 줄었다.  
+여기에 더해 PG 11 버전 부터는 `default value` & `Not Null` 값을 포함한 컬럼 추가에서도 성능 개선이 있었다.
   
 이번 시간에는 `alter table` 과 `alter table with defaul value` 를 각각 10, 11버전에서를 비교해본다.
 
-## Alter Table
-
-오래전부터 PostgreSQL은 테이블의 스키마를 변경하는 것이지만, 최신 데이터베이스는 이 작업을 거의 즉시 수행할 수 있을 만큼 충분히 정교합니다. 테이블의 기존 표현을 다시 작성하는 대신(따라서 기존의 모든 데이터를 막대한 비용을 들여 복사해야 함), 새 열에 대한 정보가 시스템 카탈로그에 추가되므로 비용이 저렴합니다. 따라서 새 열에 대한 값으로 새 행을 작성할 수 있으며, 시스템은 이전에 값이 없었던 현재 행에 대해 NULL을 반환할 수 있을 만큼 똑똑합니다.
-
 ## 성능 비교
 
-### 테스트 환경
+개인 PC에 Docker를 통해 PG 10, 11을 각각 수행한다.
+
+- 2020 M1 Mac Mini
+- 16GB Memory
+
+테스트할 테이블은 다음과 같이 **1천만건**을 생성해둔다.
 
 ```sql
 CREATE TABLE team AS
@@ -29,7 +31,7 @@ SELECT team_no, team_no % 100 AS department_no
 FROM generate_series(1, 10000000) AS team_no;
 ```
 
-- 1천만건
+테이블의 크기는 1.7GB이다.
 
 ```sql
 SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
@@ -37,6 +39,7 @@ SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
 
 ![size](./images/table_size.png)
 
+각 버전별로 이제 테스트를 해보자.
 ### PG 10
 
 **alter table**
@@ -47,11 +50,15 @@ ALTER TABLE team ADD COLUMN credits bigint;
 
 ![10_1](./images/10_1.png)
 
-**alter table with default value**
+반면 `not null & default value` 을 포함해서 `alter table` 을 진행해본다.
+
+**alter table with not null & default value**
 
 ```sql
 ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
 ```
+
+그럼 다음과 같이 **3.5초**가 걸린다.
 
 ![10_2](./images/10_2.png)
 
@@ -62,7 +69,11 @@ ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
 
 > Many other useful performance improvements, including the ability to avoid a table rewrite for ALTER TABLE ... ADD COLUMN with a non-null column default
 
+**alter table**
+
 ![11_1](./images/11_1.png)
+
+**alter table with not null & default value**
 
 ![11_2](./images/11_2.png)
 
