@@ -65,7 +65,10 @@ ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
 
 ms로 변환하면 3,500ms 인데, 단순 `alter table` 과 비교하면 **700배**의 성능 차이가 발생했다.  
   
+이는 PostgreSQL 이 실제로 전체 테이블을 다시 작성하여 각 행에 열을 추가하고 기본값으로 채우기 때문이다.
+  
 반면에 11버전에서는 어떻게 될까?
+
 ### PG 11
 
 [PostgreSQL 11의 릴리즈 노트](https://www.postgresql.org/docs/11/release-11.html) 를 보면 **Alter Table에 기본값과 non null 옵션을 포함해서 컬럼을 추가하는 작업의 성능이 개선**되었다는 내용이 나온다.
@@ -91,6 +94,15 @@ ms로 변환하면 3,500ms 인데, 단순 `alter table` 과 비교하면 **700�
 왜 그런걸까?
 
 ## 2. PG 11 에서의 성능 개선
+
+현재 non-NULL 기본값으로 테이블에 열을 추가하면 테이블 전체를 다시 작성하게 됩니다. 큰 테이블의 경우 이는 비용이 많이 들고 방해가 될 수 있습니다. 이 패치는 기본값이 변동성이 없는 경우 테이블 재작성의 필요성을 제거합니다. ALTER TABLE 시점에 기본 표현식이 평가되고 그 결과가 pg_attribute의 새로운 열(attmissingval)에 저장되며, 새로운 열(atthasmissing)이 true로 설정됩니다. 기존 행을 가져올 때는 attmissingval이 제공됩니다. 새 행은 제공된 값이나 기본값을 가지므로 attmissingval이 필요하지 않게 됩니다.
+
+테이블이 다시 작성될 때마다, 모든 속성에 대한 atthasmissing과 attmissingval 설정이 제거되는데, 이들은 더 이상 필요하지 않기 때문입니다.
+
+이로 인한 가장 눈에 띄는 코드 변경은 heap_attisnull에서 볼 수 있는데, 이 함수는 세 번째 TupleDesc 인자를 받게 되어, 만약 있을 경우 누락된 값을 감지할 수 있게 합니다. 이 인자가 필요 없는 많은 경우(예를 들어, 카탈로그 관계)에는 이 인자에 NULL을 전달할 수 있습니다.
+
+
+- [커밋](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=16828d5c0273b4fe5f10f42588005f16b415b2d8)
 
 Postgres 11에서는 필요에 따라 기존 행에 대해서만 기본값을 마샬링하여 기본값이 있는 열 추가를 빠르게 수행할 수 있는 변경 사항이 도입되었다.  
 비용이 많이 드는 테이블 재작성 및 액세스 독점의 장기 보류가 제거되어 Postgres 운영 스토리의 빈틈이 메워졌다.  
