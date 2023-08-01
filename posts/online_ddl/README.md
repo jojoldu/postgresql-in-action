@@ -3,7 +3,7 @@
 Aurora MySQL 5.7까지만 써본 경험에서 Online DDL 은 여전히 부담스럽다.  
 그럼에도 대량의 데이터가 쌓인 테이블에 DDL을 수행하는 것은 서비스를 운영하다보면 피할 수 없다.  
   
-100GB 이상의 테이블에 Online DDL로 컬럼을 추가해도 1시간이 넘도록 수row되던 경험을 해보면 가능한 기존 테이블에 컬럼을 추가하는 등의 DDL 작업은 피하고 싶어진다.    
+100GB 이상의 테이블에 Online DDL로 컬럼을 추가해도 1시간이 넘도록 수행되던 경험을 해보면 가능한 기존 테이블에 컬럼을 추가하는 등의 DDL 작업은 피하고 싶어진다.    
 
 다만, MySQL과 다르게 PostgreSQL에서는 오래 전부터 **일부 ALTER 작업에 대해서는 잠금 없는 변경**이 가능하다.  
 
@@ -18,7 +18,7 @@ Aurora MySQL 5.7까지만 써본 경험에서 Online DDL 은 여전히 부담스
 
 ## 1. 성능 비교
 
-개인 PC에 Docker를 통해 PG 10, 11을 각각 수row한다.
+개인 PC에 Docker를 통해 PG 10, 11을 각각 수행한다.
 
 - 2020 M1 Mac Mini
 - 16GB Memory
@@ -37,7 +37,7 @@ FROM generate_series(1, 10000000) AS team_no;
 SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
 ```
 
-<br /><br />
+<br />
 
 ![size](./images/table_size.png)
 
@@ -50,7 +50,7 @@ SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
 ```sql
 ALTER TABLE team ADD COLUMN credits bigint;
 ```
-<br /><br />
+<br />
 
 ![10_1](./images/10_1.png)
 
@@ -87,7 +87,7 @@ ms로 변환하면 3,500ms 인데, 단순 `alter table` 과 비교하면 **700�
 
 당연하지만 일반적인 컬럼 추가는 **4ms**로 즉시 적용되었다.  
   
-본론인 `not null & default value` 을 포함해서 진row해본다.  
+본론인 `not null & default value` 을 포함해서 진행해본다.  
   
 **alter table with not null & default value**
 
