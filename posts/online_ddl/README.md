@@ -37,9 +37,12 @@ FROM generate_series(1, 10000000) AS team_no;
 SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
 ```
 
+<br /><br />
+
 ![size](./images/table_size.png)
 
 각 버전별로 이제 테스트를 해보자.
+
 ### PG 10
 
 **alter table**
@@ -47,11 +50,12 @@ SELECT pg_size_pretty(pg_total_relation_size('"public"."team"'));
 ```sql
 ALTER TABLE team ADD COLUMN credits bigint;
 ```
+<br /><br />
 
 ![10_1](./images/10_1.png)
 
 **5ms**로 즉시 적용되었다.  
-이번엔 `not null & default value` 을 포함해서 진row해본다.
+이번엔 `not null & default value` 을 포함해서 진행해본다.
 
 **alter table with not null & default value**
 
@@ -107,7 +111,7 @@ ms로 변환하면 3,500ms 인데, 단순 `alter table` 과 비교하면 **700�
 
 이와 관련해서 PostgreSQL 11의 - [커밋](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=16828d5c0273b4fe5f10f42588005f16b415b2d8) 내용을 살펴 보면 다음과 같은 이야기가 있다.  
 
-```sql 
+
 This patch removes the need for the rewrite as long as the
 default value is not volatile. The default expression is evaluated at
 the time of the ALTER TABLE and the result stored in a new column
@@ -124,7 +128,7 @@ acquires a third TupleDesc argument, allowing it to detect a missing
 value if there is one. In many cases where it is known that there will
 not be any (e.g.  catalog relations) NULL can be passed for this
 argument.
-```
+
 
 이를 번역 겸 한번 실제로 검증해보자.
 
