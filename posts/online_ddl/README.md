@@ -1,7 +1,7 @@
 # PostgreSQL Online DDL
 
 Aurora MySQL 5.7까지만 써본 경험에서 Online DDL 은 여전히 부담스럽다.  
-그럼에도 대량의 데이터가 쌓인 테이블에 DDL을 수row하는 것은 서비스를 운영하다보면 피할 수 없다.  
+그럼에도 대량의 데이터가 쌓인 테이블에 DDL을 수행하는 것은 서비스를 운영하다보면 피할 수 없다.  
   
 100GB 이상의 테이블에 Online DDL로 컬럼을 추가해도 1시간이 넘도록 수row되던 경험을 해보면 가능한 기존 테이블에 컬럼을 추가하는 등의 DDL 작업은 피하고 싶어진다.    
 
@@ -103,10 +103,11 @@ ms로 변환하면 3,500ms 인데, 단순 `alter table` 과 비교하면 **700�
 새 컬럼이 추가될 때 **기본값이 즉시 모든 row에 적용되는 대신, 이 값은 메타데이터로 저장되며 실제 데이터는 필요에 따라 실시간으로 생성**된다.  
 즉, **각 row가 처음으로 새 컬럼을 액세스하면 기본값이 생성되고 저장**된다.
 
-이 방식의 장점은 새로운 컬럼을 추가하는 동작이 즉시 완료되고, 실제 데이터의 채우는 과정이 백그라운드에서 점진적으로 이루어지며, 이로 인해 테이블 잠금 시간을 크게 줄일 수 있다는 것이다.
+이 방식의 장점은 새로운 컬럼을 추가하는 동작이 즉시 완료되고, **실제 데이터를 채우는 과정이 백그라운드에서 점진적으로 이루어지며**, 이로 인해 테이블 잠금 시간을 크게 줄일 수 있다는 것이다.
 
 이와 관련해서 PostgreSQL 11의 - [커밋](https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=16828d5c0273b4fe5f10f42588005f16b415b2d8) 내용을 살펴 보면 다음과 같은 이야기가 있다.  
 
+```sql 
 This patch removes the need for the rewrite as long as the
 default value is not volatile. The default expression is evaluated at
 the time of the ALTER TABLE and the result stored in a new column
@@ -123,10 +124,11 @@ acquires a third TupleDesc argument, allowing it to detect a missing
 value if there is one. In many cases where it is known that there will
 not be any (e.g.  catalog relations) NULL can be passed for this
 argument.
+```
 
 이를 번역 겸 한번 실제로 검증해보자.
 
-PostgreSQL 데이터베이스의 모든 열에 대한 정보를 추적하는 시스템 테이블인 `pg_attribute` 에 두 개의 새로운 필드를 추가되었다.
+PostgreSQL 데이터베이스의 모든 열에 대한 정보를 추적하는 시스템 테이블인 `pg_attribute` 에 두 개의 새로운 필드가 추가되었다.
 
 - `atthasmissing`
   - `attmissingval` 이 설정되었는지 여부 (설정되었으면 `true`)
@@ -136,6 +138,8 @@ PostgreSQL 데이터베이스의 모든 열에 대한 정보를 추적하는 시
   - `ALTER TABLE ... ADD COLUMN` 명령을 실행할 때, 기본 표현식이 평가되고 그 결과가 `attmissingval` 에 저장된다.
   - 즉, 이 컬럼은 row 가 처음 생성될 때 누락될 수 있는 기본값을 저장합니다.
 
+이들은 다음과 같이 확인 가능하다.
+
 ```sql
 SELECT attname, atthasmissing, attmissingval
 FROM pg_attribute
@@ -144,7 +148,7 @@ WHERE attrelid = 'team'::regclass;
 
 ![fetch1](./images/fetch1.png)
 
-여기서 위 실험처럼 기본값을 가진 신규 컬럼을 추가하면 
+여기서 첫번째 실험처럼 기본값을 가진 신규 컬럼을 추가하면 
 
 ```sql
 ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
@@ -154,11 +158,22 @@ ALTER TABLE team ADD COLUMN credits2 bigint NOT NULL DEFAULT 0;
 
 ![fetch2](./images/fetch2.png)
 
-스캔은 row을 반환하면서 이 새로운 필드를 확인하고, 필요한 곳에 누락된 값을 반환한다.  
-테이블에 새로 삽입된 row들은 생성될 때 기본값을 가져와서, 그들의 내용을 반환할 때 `atthasmissing` 을 확인할 필요가 없게 된다.
+이 과정을 정리하면 다음과 같다.
 
-이 최적화는 기본값과 비휘발성 함수 호출에만 작동한다.  
-random()과 같은 변동 함수를 사용해보자. 
+- 사용자가 `ALTER TABLE ADD COLUMN` 명령을 실행하여 `non-NULL default` 이 있는 새로운 컬럼을 추가하면, PostgreSQL은 해당 기본값 표현식을 평가한다. 
+- 이 평가된 기본값은 `pg_attribute.attmissingval` 에 저장된다.
+- 동시에, `pg_attribute.atthasmissing` 컬럼이 true로 설정된다.
+  - 이는 **새로운 컬럼이 기본값을 가지고 있으며**, 그 값이 `attmissingval` 에 저장되어 있다는 것을 나타낸다.
+- 이후부터는 기존의 행을 조회할 때, PostgreSQL은 `atthasmissing` 이 `true` 로 설정된 컬럼들을 확인하고, **해당 row에 해당 컬럼의 값이 누락된 경우 attmissingval에서 기본값을 가져와 사용**한다.
+- 새로운 row을 insert 할 때는, 사용자가 명시적으로 값을 제공하거나, 그렇지 않으면 평가된 기본값이 사용하는데, 이 경우 `attmissingval` 값은 필요하지 않다.
+
+전체 테이블이 다시 작성될 때 (VACUUM FULL, 클러스터링, 위와 같은 방식이 적용되지 않는 일부 `ALTER TABLE` 등) PostgreSQL은 모든 `attmissingval` 및 `atthasmissing` 설정을 제거한다.
+이는 모든 행이 새로운 컬럼의 값을 갖게 되어 더이상 필요하지 않기 때문이다.
+
+### 최적화 미적용 대상
+
+이 최적화는 기본값과 **비휘발성 함수** 호출에만 작동한다.  
+예를 들어 `random()` 과 같은 함수를 사용해보자. 
 
 ```sql
 ALTER TABLE team ADD COLUMN rand_num int NOT NULL DEFAULT random();
@@ -187,14 +202,19 @@ ALTER TABLE team ADD COLUMN created_at timestamp with time zone NOT NULL DEFAULT
 
 새로 삽입된 row은 예상대로 현재 `now()` 값이 된다.
 
-
-
 ## 마무리
 
-문서 저장소, 키/값 저장소 및 기타 덜 정교한 저장 기술보다 관계형 데이터베이스를 선호하는 가장 큰 이유 중 하나는 데이터 무결성이다. 열은 INT, DECIMAL 또는 TIMESTAMPTZ와 같은 강력한 타입으로 입력된다. 값은 NOT NULL, VARCHAR(길이) 또는 CHECK 제약 조건으로 제약된다. 외래 키 제약 조건은 참조 무결성을 보장한다.
+NoSQL 보다 관계형 데이터베이스를 선호하는 가장 큰 이유 중 하나는 **데이터 무결성**이다.  
+테이블의 row는 `int`, `timestampz` 등의 타입으로 강제되며, `not null`, `varchar` 등으로 추가적인 제약 조건을 둘 수 있다.  
 
-스키마 설계가 잘 되어 있으면 데이터베이스가 이를 보장하기 때문에 데이터의 품질이 높은 상태임을 확신할 수 있다. 이렇게 하면 쿼리 또는 변경이 더 쉬워지고, 예기치 않은 상태의 데이터로 인해 발생하는 애플리케이션 수준의 버그 전체를 방지할 수 있다. 저와 같은 애호가들은 항상 강력한 데이터 제약 조건에 찬성해 왔지만, 대규모로 실row되는 Postgres에서는 새로운 null이 아닌 필드를 만들 수 없는 경우가 많다는 사실도 알고 있었다.
-
+이와 같은 제약조건으로 인해 관계형 데이터베이스를 사용할때는 **데이터의 품질에 확신**할 수 있다.  
+강력한 제약 조건을 둘수록 쿼리 또는 변경이 더 쉬워지고, 예기치 않은 상태의 데이터로 인해 발생하는 애플리케이션 수준의 버그 전체를 방지할 수 있다.  
+  
+그렇기 때문에 `not null default` 등의 옵션은 데이터베이스에서 사용할 수 있는 좋은 옵션이다.  
+  
+그리고 PostgreSQL 11부터는 이 강력한 옵션을 최소한의 리소스로 적용할 수 있는 개선점이 적용되었다.  
+  
+낮은 버전의 PostgreSQL을 사용한다면 이참에 11버전 이상으로 업데이트를 권장한다.
 
 ## 참고
 
