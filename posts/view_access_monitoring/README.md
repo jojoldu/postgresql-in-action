@@ -22,3 +22,48 @@ WHERE
 ORDER BY
     calls DESC;
 ```
+
+```sql
+CREATE OR REPLACE VIEW old_name AS
+    WITH qry AS MATERIALIZED (SELECT view_access_log('old_name') AS logged)
+  SELECT vw.* FROM vw_new_name vw, qry WHERE qry.logged > 0;
+```
+
+```sql
+CREATE SEQUENCE seq_view_consumer;
+CREATE OR REPLACE FUNCTION view_access_log(text) 
+RETURNS int
+LANGUAGE PLPGSQL AS
+$$
+BEGIN
+ RETURN nextval('seq_view_consumer');
+END
+$$;
+```
+
+```sql
+CREATE TABLE view_access_log
+(
+    id          bigint GENERATED ALWAYS AS IDENTITY
+        PRIMARY KEY,
+    dtwhen      timestamp WITH TIME ZONE DEFAULT NOW(),
+    view_name   text,
+    call_stack  text
+);
+```
+
+```sql
+CREATE FUNCTION touch_view(view_str text) RETURNS integer
+    LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    s_stack text;
+BEGIN
+    -- GET CURRENT DIAGNOSTICS s_stack = PG_CONTEXT;  /* Uncomment this to log the call stack.  Too intense originally! */
+ 
+    INSERT INTO test.view_access_log (view_name, call_stack) VALUES(view_str, s_stack);
+    RETURN 1;
+END
+$$;
+```
