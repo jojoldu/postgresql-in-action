@@ -20,5 +20,5 @@ FROM
 WHERE
     query LIKE '%' || views.viewname || '%'
 ORDER BY
-    total_time DESC;
+    calls DESC;
 ```
