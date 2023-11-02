@@ -44,10 +44,9 @@ $$;
 ```sql
 CREATE TABLE view_access_log
 (
-    id          bigint GENERATED ALWAYS AS IDENTITY
-        PRIMARY KEY,
-    dtwhen      timestamp WITH TIME ZONE DEFAULT NOW(),
-    view_name   text,
+    id bigint GENERATED ALWAYS AS IDENTITY,
+    accessed_at      timestamp WITH TIME ZONE DEFAULT NOW(),
+    view_name   varchar(255),
     call_stack  text
 );
 ```
