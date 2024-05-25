@@ -1,4 +1,16 @@
-# row constructor comparison로 성능 개선하기
+# Row constructor comparison로 성능 개선하기
+
+[Row constructor comparison](https://www.postgresql.org/docs/current/functions-comparisons.html#ROW-WISE-COMPARISON)는 두 개 이상의 열을 하나의 행 생성자(row constructor)로 묶어 비교하는 것을 뜻한다.  
+  
+PostgreSQL에서는 `(a, b) > (x, y)` 형태로 두 행 생성자를 비교할 수 있다.  
+이 비교는 사전식 순서(lexicographical order)를 기준으로 한다.
+
+사전식 순서 비교 방식은 다음과 같다.
+
+- 첫 번째 열을 비교
+- 첫 번째 열이 같다면, 두 번째 열을 비교
+
+이 방식을 통해 여러 열을 한 번에 비교할 수 있다.
 
 ```sql
 SELECT Posts.*
