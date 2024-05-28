@@ -82,6 +82,12 @@ Nested Loop Join은 조인 키의 분포나 데이터 크기에 따라 성능이
 
 ### Join문 수정
 
+가장 쉬운 방법은 직접적인 Join을 사용하지 않고,
+
+Subquery 를 통해 먼저 대량의 데이터를 필터링 하고, 
+
+필터링 된 결과물을 Join에 활용하는 것이다.
+
 ```sql
 SELECT i.id, i.titles[1] AS title, i.icon_url
 FROM institutions i
@@ -97,9 +103,6 @@ WHERE i.priority > ?
   AND i.type = ?
 GROUP BY i.id;
 ```
-
-조인 순서 최적화
-조인 순서를 변경하여 필터링된 데이터를 먼저 조인함으로써 Nested Loop 조인의 반복 작업을 줄일 수 있습니다.
 
 ```
 Group  (cost=9601.65..9602.13 rows=21 width=552) (actual time=109.218..109.230 rows=17 loops=1)
@@ -134,7 +137,16 @@ Planning Time: 1.053 ms
 Execution Time: 109.388 ms
 ```
 
+수행 시간은 109ms로 기존 대비 (600ms) 6배 성능 개선이 되었다.
+
 ### With 사용하기
+
+두번째는 With를 사용하는 것이다.
+
+WITH 구문은 공통 테이블 표현식(CTE, Common Table Expression)을 정의하는 데 사용되며, 복잡한 쿼리를 단순화하고 최적화할 수 있는 방법을 제공한다.
+
+With를 사용하여 vouchers 테이블을 미리 필터링하고 그룹화하여 filtered_vouchers 라는 임시 테이블을 생성한다. 
+이 임시 테이블을 사용하여 나머지 조인을 수행하므로, 조인 과정에서의 불필요한 데이터 필터링을 줄일 수 있다.
 
 ```sql
 WITH filtered_vouchers AS (
@@ -155,9 +167,7 @@ SELECT i.id, i.titles[1] title, i.icon_url
 ```
 
 
-CTE를 사용하여 vouchers 테이블을 먼저 필터링하고 그룹화한 후 나머지 조인을 수행하면 성능을 개선할 수 있습니다.
-
-
+이를 실행 계획을 수행해보면 다음과 같다.
 ```sql
 Group  (cost=9601.65..9602.13 rows=21 width=552) (actual time=114.565..114.579 rows=20 loops=1)
   Group Key: i.id
@@ -190,6 +200,17 @@ Group  (cost=9601.65..9602.13 rows=21 width=552) (actual time=114.565..114.579 r
 Planning Time: 0.265 ms
 Execution Time: 114.649 ms
 ```
+
+수행 시간은 114ms로 기존 대비 (600ms) 6배 성능 개선이 되었다.
+
+ 
+
+각 CTE는 독립적으로 인덱스를 사용할 수 있다보니, 인덱스의 효율성이 높아질 수 있다.  
+
+또한, 쿼리 계획이 단순해지면서 PostgreSQL이 더 나은 인덱스를 선택할 가능성이 커진다.
+
+
+## 마무리
 
 WITH 구문을 사용하여 쿼리를 개선할 수 있는 이유는 여러 가지가 있다.  
 WITH 구문은 공통 테이블 표현식(CTE, Common Table Expression)을 정의하는 데 사용되며, 복잡한 쿼리를 단순화하고 최적화할 수 있는 방법을 제공한다.
