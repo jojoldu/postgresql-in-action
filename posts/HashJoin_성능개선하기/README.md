@@ -1,5 +1,9 @@
 # Nested Loop Join을 HashJoin으로 개선하기
 
+RDBMS를 사용하다보면 Nested Loop Join 으로 인해 성능 저하를 겪는 경우가 많다.  
+
+## 1. 문제 쿼리
+
 ```sql
 SELECT i.id, i.titles[?] AS title, i.icon_url 
 FROM institutions i 
@@ -8,6 +12,8 @@ FROM institutions i
 WHERE i.priority > ? AND i.id != ? AND i.type = ? AND ic.deleted_at IS ? AND v.course_id = ? AND v.deleted_at IS ? 
 GROUP BY i.id;
 ```
+
+이 쿼리의 실행 계획을 보면 다음과 같다.
 
 ```sql
 Group  (cost=6267.30..6267.31 rows=1 width=552) (actual time=639.801..639.811 rows=17 loops=1)
@@ -52,39 +58,30 @@ Execution Time: 639.863 ms
 - Index Only Scan
   - `vouchers` 테이블에 대한 Index Only Scan이 반복되면서 많은 I/O 작업이 발생한다.
 
-## 해결책
+## 2. 해결책
 
 위 쿼리는 모든 조인 조건을 한 번에 처리하므로, 더 많은 데이터 행을 반복적으로 스캔하게 된다.
 
-그래서 가장 해결이 필요한 부분은 184,852번의 vouchers 테이블 접근이다.
+그래서 가장 해결이 필요한 부분은 **184,852번의 vouchers 테이블 접근**이다.
 
-이를 해결하기 위해서는 Nested Loop Join → Hash Join 으로 변경하는 것이다.
+이를 해결하기 위해서는 **Nested Loop Join → Hash Join** 으로 변경하는 것이다.
 
- 
+Hash Join은 Nested Loop Join에 비해 **대량의 데이터 접근에서의 성능이 뛰어나다**.
 
-Hash Join은 Nested Loop Join에 비해 대량의 데이터 접근에서의 성능이 뛰어나다.
-
-데이터 스캔 횟수 감소
-
-Hash Join은 해시 테이블을 사용하여 한 번의 스캔으로 조인을 수행할 수 있다. 
-
-반면, Nested Loop Join은 외부 테이블의 각 행에 대해 내부 테이블을 반복적으로 스캔해야 하므로 스캔 횟수가 많다.
-
-일관된 성능 
-
-Hash Join은 해시 테이블을 사용하여 조인을 수행하므로, 조인 키의 분포나 데이터의 크기에 관계없이 일정한 성능을 제공한다. 
-
-Nested Loop Join은 조인 키의 분포나 데이터 크기에 따라 성능이 크게 달라질 수 있다.
-
- 
+- **데이터 스캔 횟수 감소**
+  - Hash Join은 해시 테이블을 사용하여 한 번의 스캔으로 조인을 수행할 수 있다.
+  - 반면, Nested Loop Join은 외부 테이블의 각 행에 대해 내부 테이블을 반복적으로 스캔해야 하므로 스캔 횟수가 많다.
+- **일관된 성능**
+  - Hash Join은 해시 테이블을 사용하여 조인을 수행하므로, 조인 키의 분포나 데이터의 크기에 관계없이 일정한 성능을 제공한다.
+  - Nested Loop Join은 조인 키의 분포나 데이터 크기에 따라 성능이 크게 달라질 수 있다.
 
 그래서 이 쿼리를 수정하여 Hash Join 이 수행되도록 한다. 
 
-### Join문 수정
+### 2-1. Join Subquery
 
 가장 쉬운 방법은 직접적인 Join을 사용하지 않고,
 
-Subquery 를 통해 먼저 대량의 데이터를 필터링 하고, 
+Subquery 를 통해 먼저 대량의 데이터를 필터링 하고,
 
 필터링 된 결과물을 Join에 활용하는 것이다.
 
@@ -103,6 +100,8 @@ WHERE i.priority > ?
   AND i.type = ?
 GROUP BY i.id;
 ```
+
+이를 실행 계획을 수행해보면 다음과 같다.
 
 ```
 Group  (cost=9601.65..9602.13 rows=21 width=552) (actual time=109.218..109.230 rows=17 loops=1)
@@ -137,15 +136,15 @@ Planning Time: 1.053 ms
 Execution Time: 109.388 ms
 ```
 
-수행 시간은 109ms로 기존 대비 (600ms) 6배 성능 개선이 되었다.
+수행 시간은 **109ms**로 **기존 대비 (600ms) 6배 성능 개선**이 되었다.
 
-### With 사용하기
+### 2-2. With 사용하기
 
 두번째는 With를 사용하는 것이다.
 
-WITH 구문은 공통 테이블 표현식(CTE, Common Table Expression)을 정의하는 데 사용되며, 복잡한 쿼리를 단순화하고 최적화할 수 있는 방법을 제공한다.
+WITH 구문은 공통 테이블 표현식(CTE, Common Table Expression)을 정의하는 데 사용되며, **복잡한 쿼리를 단순화하고 최적화할 수 있는 방법**을 제공한다.
 
-With를 사용하여 vouchers 테이블을 미리 필터링하고 그룹화하여 filtered_vouchers 라는 임시 테이블을 생성한다. 
+With를 사용하여 vouchers 테이블을 미리 필터링하고 그룹화하여 filtered\_vouchers 라는 임시 테이블을 생성한다.  
 이 임시 테이블을 사용하여 나머지 조인을 수행하므로, 조인 과정에서의 불필요한 데이터 필터링을 줄일 수 있다.
 
 ```sql
@@ -168,6 +167,7 @@ SELECT i.id, i.titles[1] title, i.icon_url
 
 
 이를 실행 계획을 수행해보면 다음과 같다.
+
 ```sql
 Group  (cost=9601.65..9602.13 rows=21 width=552) (actual time=114.565..114.579 rows=20 loops=1)
   Group Key: i.id
@@ -201,11 +201,9 @@ Planning Time: 0.265 ms
 Execution Time: 114.649 ms
 ```
 
-수행 시간은 114ms로 기존 대비 (600ms) 6배 성능 개선이 되었다.
+수행 시간은 **114ms**로 **기존 대비 (600ms) 6배 성능 개선**이 되었다.
 
- 
-
-각 CTE는 독립적으로 인덱스를 사용할 수 있다보니, 인덱스의 효율성이 높아질 수 있다.  
+각 CTE는 독립적으로 인덱스를 사용할 수 있다보니, 인덱스의 효율성이 높아질 수 있다.
 
 또한, 쿼리 계획이 단순해지면서 PostgreSQL이 더 나은 인덱스를 선택할 가능성이 커진다.
 
