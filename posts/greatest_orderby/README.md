@@ -55,12 +55,17 @@ LIMIT ? OFFSET ?;
 ```
 
 - JOIN 사용
-  - INNER JOIN과 LEFT JOIN LATERAL을 사용하여 서브쿼리를 제거하고 JOIN으로 대체했습니다.
-  - LATERAL JOIN을 사용하여 최신 mentoring을 선택합니다.
+  - INNER JOIN과 LEFT JOIN LATERAL을 사용하여 서브쿼리를 제거하고 JOIN으로 대체
+  - LATERAL JOIN을 사용하여 최신 mentoring을 선택
 - 서브쿼리 제거
-  - IN 서브쿼리를 JOIN으로 대체했습니다.
+  - IN 서브쿼리를 JOIN으로 대체
 - 정렬 최적화
-  - GREATEST 함수의 인자를 COALESCE를 사용하여 NULL 값을 처리했습니다.
+  - GREATEST 함수의 인자를 COALESCE를 사용하여 NULL 처리
+
+문제점: GREATEST 함수 내부에 서브쿼리를 사용하는 경우, 각 행에 대해 서브쿼리가 반복 실행될 수 있다.  
+이는 불필요한 부하를 유발
+해결책: LATERAL JOIN을 사용하여 서브쿼리를 한 번만 실행하고 결과를 사용 
+이렇게 하면 필요한 데이터만 가져오고 불필요한 반복을 피할 수 있음
 
 
 ```sql
