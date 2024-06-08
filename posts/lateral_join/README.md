@@ -76,6 +76,30 @@ LIMIT 10;
 
 ```
 
+```sql
+EXPLAIN ANALYZE
+SELECT mentors.id, mentors.name, mentors.created_at
+FROM mentors
+WHERE mentors.id IN (
+    SELECT mentor_id
+    FROM mentorings
+    WHERE status = 'active'
+);
+```
+
+```sql
+EXPLAIN ANALYZE
+SELECT mentors.id, mentors.name, mentors.created_at
+FROM mentors
+JOIN LATERAL (
+    SELECT 1
+    FROM mentorings
+    WHERE mentorings.mentor_id = mentors.id AND mentorings.status = 'active'
+    LIMIT 1
+) AS active_mentoring ON true;
+
+```
+
 - 중첩 서브쿼리
   - 각 멘토에 대해 서브쿼리가 반복 실행되므로, 많은 행을 처리할 때 성능이 저하
 - LATERAL JOIN
