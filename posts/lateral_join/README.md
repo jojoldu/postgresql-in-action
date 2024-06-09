@@ -18,29 +18,29 @@ LATERAL JOIN의 장점
   - 중첩된 서브쿼리를 피할 수 있으며, 데이터베이스 최적화 엔진이 LATERAL JOIN을 효율적으로 처리할 수 있다.
 
 ```sql
-CREATE TABLE mentors (
-    id SERIAL PRIMARY KEY,
-    name TEXT,
+CREATE TABLE mentor (
+    id BIGSERIAL PRIMARY KEY,
+    name varchar(255),
     created_at TIMESTAMP
 );
 
-CREATE TABLE mentorings (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE mentoring (
+    id BIGSERIAL PRIMARY KEY,
     mentor_id INT,
-    status TEXT,
+    status varchar(255),
     created_at TIMESTAMP,
-    FOREIGN KEY (mentor_id) REFERENCES mentors (id)
+    FOREIGN KEY (mentor_id) REFERENCES mentor (id)
 );
 ```
 
 ```sql
--- mentors 테이블에 10만 건 데이터 삽입
-INSERT INTO mentors (name, created_at)
+-- mentor 테이블에 10만 건 데이터 삽입
+INSERT INTO mentor (name, created_at)
 SELECT 'Mentor ' || g, NOW() - (g || ' days')::interval
 FROM generate_series(1, 100000) AS g;
 
--- mentorings 테이블에 10만 건 데이터 삽입
-INSERT INTO mentorings (mentor_id, status, created_at)
+-- mentoring 테이블에 10만 건 데이터 삽입
+INSERT INTO mentoring (mentor_id, status, created_at)
 SELECT (g % 100000) + 1, 'active', NOW() - (g || ' minutes')::interval
 FROM generate_series(1, 100000) AS g;
 ```
@@ -48,26 +48,26 @@ FROM generate_series(1, 100000) AS g;
 
 ```sql
 EXPLAIN ANALYZE
-SELECT mentors.id, mentors.name, mentors.created_at AS mentor_created_at, (
+SELECT mentor.id, mentor.name, mentor.created_at AS mentor_created_at, (
     SELECT created_at
-    FROM mentorings
-    WHERE mentorings.mentor_id = mentors.id
+    FROM mentoring
+    WHERE mentoring.mentor_id = mentor.id
     ORDER BY created_at DESC
     LIMIT 1
 ) AS latest_mentoring_created_at
-FROM mentors
+FROM mentor
 ORDER BY latest_mentoring_created_at DESC
 LIMIT 10;
 ```
 
 ```sql
 EXPLAIN ANALYZE
-SELECT mentors.id, mentors.name, mentors.created_at AS mentor_created_at, latest_mentoring.created_at AS latest_mentoring_created_at
-FROM mentors
+SELECT mentor.id, mentor.name, mentor.created_at AS mentor_created_at, latest_mentoring.created_at AS latest_mentoring_created_at
+FROM mentor
 LEFT JOIN LATERAL (
     SELECT created_at
-    FROM mentorings
-    WHERE mentorings.mentor_id = mentors.id
+    FROM mentoring
+    WHERE mentoring.mentor_id = mentor.id
     ORDER BY created_at DESC
     LIMIT 1
 ) AS latest_mentoring ON true
@@ -78,23 +78,23 @@ LIMIT 10;
 
 ```sql
 EXPLAIN ANALYZE
-SELECT mentors.id, mentors.name, mentors.created_at
-FROM mentors
-WHERE mentors.id IN (
+SELECT mentor.id, mentor.name, mentor.created_at
+FROM mentor
+WHERE mentor.id IN (
     SELECT mentor_id
-    FROM mentorings
+    FROM mentoring
     WHERE status = 'active'
 );
 ```
 
 ```sql
 EXPLAIN ANALYZE
-SELECT mentors.id, mentors.name, mentors.created_at
-FROM mentors
+SELECT mentor.id, mentor.name, mentor.created_at
+FROM mentor
 JOIN LATERAL (
     SELECT 1
-    FROM mentorings
-    WHERE mentorings.mentor_id = mentors.id AND mentorings.status = 'active'
+    FROM mentoring
+    WHERE mentoring.mentor_id = mentor.id AND mentoring.status = 'active'
     LIMIT 1
 ) AS active_mentoring ON true;
 
