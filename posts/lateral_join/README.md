@@ -48,16 +48,31 @@ FROM generate_series(1, 100000) AS g;
 
 ```sql
 EXPLAIN ANALYZE
-SELECT mentor.id, mentor.name, mentor.created_at AS mentor_created_at, (
-    SELECT created_at
+SELECT mentor.id, mentor.name, mentor.created_at, (
+    SELECT MAX(created_at)
     FROM mentoring
-    WHERE mentoring.mentor_id = mentor.id
-    ORDER BY created_at DESC
-    LIMIT 1
+    WHERE mentoring.mentor_id = mentor.id AND mentoring.status = 'active'
 ) AS latest_mentoring_created_at
 FROM mentor
+WHERE mentor.created_at >= '2023-01-01'
 ORDER BY latest_mentoring_created_at DESC
-LIMIT 10;
+LIMIT 20;
+```
+
+```sql
+EXPLAIN ANALYZE
+SELECT mentor.id, mentor.name, mentor.created_at, latest_mentoring.created_at AS latest_mentoring_created_at
+FROM mentor
+JOIN (
+    SELECT mentor_id, MAX(created_at) AS created_at
+    FROM mentoring
+    WHERE status = 'active'
+    GROUP BY mentor_id
+) AS latest_mentoring ON mentor.id = latest_mentoring.mentor_id
+WHERE mentor.created_at >= '2023-01-01'
+ORDER BY latest_mentoring.created_at DESC
+LIMIT 20;
+
 ```
 
 ```sql
@@ -67,36 +82,13 @@ FROM mentor
 LEFT JOIN LATERAL (
     SELECT created_at
     FROM mentoring
-    WHERE mentoring.mentor_id = mentor.id
+    WHERE mentoring.mentor_id = mentor.id AND mentoring.status = 'active'
     ORDER BY created_at DESC
     LIMIT 1
 ) AS latest_mentoring ON true
+WHERE mentor.created_at >= '2023-01-01'
 ORDER BY latest_mentoring.created_at DESC
-LIMIT 10;
-
-```
-
-```sql
-EXPLAIN ANALYZE
-SELECT mentor.id, mentor.name, mentor.created_at
-FROM mentor
-WHERE mentor.id IN (
-    SELECT mentor_id
-    FROM mentoring
-    WHERE status = 'active'
-);
-```
-
-```sql
-EXPLAIN ANALYZE
-SELECT mentor.id, mentor.name, mentor.created_at
-FROM mentor
-JOIN LATERAL (
-    SELECT 1
-    FROM mentoring
-    WHERE mentoring.mentor_id = mentor.id AND mentoring.status = 'active'
-    LIMIT 1
-) AS active_mentoring ON true;
+LIMIT 20;
 
 ```
 
@@ -104,3 +96,4 @@ JOIN LATERAL (
   - 각 멘토에 대해 서브쿼리가 반복 실행되므로, 많은 행을 처리할 때 성능이 저하
 - LATERAL JOIN
   - 서브쿼리를 한 번만 실행하고 결과를 결합하므로, 중복된 연산을 줄여 성능을 향상시킨다.
+
