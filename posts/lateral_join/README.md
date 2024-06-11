@@ -1,11 +1,24 @@
-# LATERAL Join
+# LATERAL JOIN 으로 성능 개선하기
 
-LATERAL JOIN은 각 행에 대해 서브쿼리를 실행할 수 있게 해주는 특별한 형태의 JOIN이다.  
-일반적인 JOIN에서는 JOIN 조건이 테이블 간의 결합에 사용되지만, LATERAL JOIN은 각 행에 대해 서브쿼리를 실행하여 그 결과를 결합할 수 있다.
+[PostgreSQL 공식 문서](https://www.postgresql.org/docs/15/sql-select.html) 에서는 LATERAL Join에 대해 다음과 같이 설명한다.
 
-주요 특징
+> LATERAL 키워드는 하위 `SELECT FROM` 항목 앞에 올 수 있다.  
+> 이렇게 하면 **하위 `SELECT가 FROM` 목록에서 그 앞에 나타나는 `FROM` 항목의 열을 참조**할 수 있다.  
+> (LATERAL이 없으면 각 하위 SELECT는 독립적으로 평가되므로 다른 FROM 항목을 상호 참조할 수 없다.)
+> FROM 항목에 LATERAL 상호 참조가 포함된 경우 평가는 다음과 같이 진행된다.  
+> 상호 참조된 열을 제공하는 FROM 항목의 각 행 또는 열을 제공하는 여러 FROM 항목의 행 집합에 대해 해당 행 또는 행 집합의 열 값을 사용하여 LATERAL 항목이 평가된다.  
+> 결과 행은 평소와 같이 계산된 행과 조인된다.  
+> 이 작업은 열 소스 테이블의 각 행 또는 행 집합에 대해 반복된다.
+
+정리하면 LATERAL JOIN은 다음과 같은 특징을 갖고 있다.
+
 - 서브쿼리는 LATERAL JOIN을 사용하여 외부 쿼리에서 참조할 수 있다.
 - 각 행에 대해 서브쿼리가 실행되므로, 동적으로 계산된 값을 결합할 수 있다.
+
+LATERAL JOIN은 각 행에 대해 서브쿼리를 실행할 수 있게 해주는 특별한 형태의 JOIN이다.  
+**일반적인 JOIN에서는 JOIN 조건이 테이블 간의 결합에 사용되지만, LATERAL JOIN은 각 행에 대해 서브쿼리를 실행하여 그 결과를 결합**할 수 있다.
+
+즉, LATERAL JOIN은 **결과 집합의 각 행을 반복하고 해당 행을 매개변수로 사용하여 하위 쿼리를 평가하는 SQL foreach 루프**와 유사하다.
 
 LATERAL JOIN의 장점
 - 동적 서브쿼리
