@@ -1,6 +1,6 @@
 # LATERAL JOIN 으로 성능 개선하기
 
-[PostgreSQL 공식 문서](https://www.postgresql.org/docs/15/sql-select.html) 에서는 LATERAL Join에 대해 다음과 같이 설명한다.
+[PostgreSQL 공식 문서](https://www.postgresql.org/docs/15/sql-select.html)에서는 LATERAL Join에 대해 다음과 같이 설명한다.
 
 > LATERAL 키워드는 하위 `SELECT FROM` 항목 앞에 올 수 있다.  
 > 이렇게 하면 **하위 `SELECT가 FROM` 목록에서 그 앞에 나타나는 `FROM` 항목의 열을 참조**할 수 있다.  
@@ -110,3 +110,8 @@ LIMIT 20;
 - LATERAL JOIN
   - 서브쿼리를 한 번만 실행하고 결과를 결합하므로, 중복된 연산을 줄여 성능을 향상시킨다.
 
+
+```sql
+CREATE INDEX idx_vouchers_covering 
+ON vouchers (course_id, deleted_at, type, limited_at);
+```
