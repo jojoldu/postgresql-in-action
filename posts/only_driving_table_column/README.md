@@ -52,10 +52,16 @@ Planning Time: 0.852 ms
 Execution Time: 189.201 ms
 ```
 
+189ms가 느린 것은 아니지만, 각 테이블들의 크기에 비해 만족스럽지 못하다.  
+여러 중첩 조인과 선 필터, PostgreSQL 14의 Memoize 등 성능 효과를 전혀 보지 못하고 있다.  
+이를 개선해보자.
 
 ## 해결 
 
-
+위 쿼리를 자세히 살펴보면 `left join "courses" as course on review."course_id" = course."id"` 와 `where ~ and course."id" in (?)` 를 통해 `courses.id`와 `review.course_id`가 동일한 값임을 알 수 있다.  
+  
+즉, **굳이 Join 테이블인 courses가 없어도 조회 조건이 완성 가능**하다.  
+이를 통해 **Join 전에 필터링을 먼저 수행한 후 조인을 하여 성능 개선**을 할 수 있다.  
 
 ```sql
 select *
@@ -70,6 +76,8 @@ where review."type" = ?
 order by review."id" + 0 desc
 limit 10 offset 20;
 ```
+
+이에 대한 실행 계획은 다음과 같다.
 
 ```sql
 Limit  (cost=14642.94..14662.08 rows=10 width=4845) (actual time=15.138..17.700 rows=10 loops=1)
@@ -112,23 +120,13 @@ Limit  (cost=14642.94..14662.08 rows=10 width=4845) (actual time=15.138..17.700 
                     Index Cond: (id = course.cover_file)
 Planning Time: 0.876 ms
 Execution Time: 18.506 ms
-
-```
-Native 로 Join을 맺지 않고,
-
-서브쿼리 (`from (~~) as p0`) 로 먼저 20개만 걸러낸뒤, 이 20개만으로 나머지 테이블들을 Join 맺도록 했다.
-
-이에 대한 결과는
-
-```
-Execution Time: 151.693 ms
 ```
 
-416ms → 151 ms로 **대략 170% 성능 개선**이 되었다.
+단일 테이블로 선 필터링을 하게 되어 **Join 대상이 줄어듬**과 동시에 [Memoize](https://jojoldu.tistory.com/700) 등 캐시 효과도 볼 수 있게 되었다.  
 
-## ORM
+189ms → 18 ms로 **대략 1,000% 성능 개선**이 되었다.
 
+## 마무리
 
-만약 특정 ORM에서 `from` 의 서브쿼리가 어렵다면 (ex-JPA) 이때는 서브쿼리가 아니라
-
-**서브쿼리를 선 수행후 나온 결과물 (id 20개)를 where in 으로 하여 쿼리를 나눠서 수행**하면 된다.
+복잡한 쿼리를 작성하다보면 나도 모르게 여러 테이블의 컬럼을 활용하여 조건문을 완성할때가 있다.  
+Join의 조건을 보고 단일 테이블의 컬럼을 최대한 활용할 수 있다면 이를 최대한 활용하자.
