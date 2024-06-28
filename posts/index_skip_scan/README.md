@@ -1,4 +1,221 @@
-# PostgreSQL Index Skip Scan
+# [PostgreSQL] n_distinct 와 Index Skip Scan
+
+
+`PG_STATS`는 PostgreSQL에서 테이블의 통계 정보를 제공하는 뷰이다. 이 뷰는 PostgreSQL의 통계 수집기가 수집한 다양한 통계 정보를 담고 있으며, 이 정보는 쿼리 플래너가 최적의 쿼리 실행 계획을 세우는 데 사용한다.
+
+`PG_STATS` 뷰에는 각 테이블과 열에 대한 다양한 통계 정보가 포함되어 있다. 주요 컬럼 중 하나는 `n_distinct`로, 이는 해당 열의 고유 값의 수에 대한 통계치를 나타낸다.
+
+### `PG_STATS`의 주요 컬럼
+- `schemaname`: 스키마 이름
+- `tablename`: 테이블 이름
+- `attname`: 열 이름
+- `null_frac`: 열 값이 NULL인 비율
+- `avg_width`: 열의 평균 바이트 길이
+- `n_distinct`: 고유 값의 수에 대한 추정치
+- `most_common_vals`: 가장 흔한 값들
+- `most_common_freqs`: 가장 흔한 값들의 빈도
+- 기타 통계 정보
+
+### `n_distinct`의 의미
+
+- `n_distinct`는 해당 열의 고유 값의 수를 추정한 값이다.
+- 양수인 경우, 고유 값의 수를 직접 나타낸다.
+- 음수인 경우, 고유 값의 수를 행 수에 대한 비율로 나타낸다. 예를 들어, `-0.5`는 전체 행의 절반이 고유 값임을 의미한다.
+
+### 예시
+다음은 `employees` 테이블의 `department` 열에 대한 통계 정보를 확인하는 예시이다.
+
+#### 1. 샘플 테이블 생성 및 데이터 삽입
+
+```sql
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    department VARCHAR(50)
+);
+
+INSERT INTO employees (name, department) VALUES
+('Alice', 'HR'),
+('Bob', 'Engineering'),
+('Charlie', 'Engineering'),
+('David', 'HR'),
+('Eve', 'Marketing'),
+('Frank', 'HR'),
+('Grace', 'Marketing');
+```
+
+#### 2. 통계 수집
+
+```sql
+ANALYZE employees;
+```
+
+#### 3. `PG_STATS`에서 통계 정보 조회
+
+```sql
+SELECT
+    schemaname,
+    tablename,
+    attname,
+    null_frac,
+    avg_width,
+    n_distinct,
+    most_common_vals,
+    most_common_freqs
+FROM
+    pg_stats
+WHERE
+    tablename = 'employees' AND attname = 'department';
+```
+
+### 예시 결과 해석
+결과는 다음과 같을 수 있다.
+
+| schemaname | tablename | attname    | null_frac | avg_width | n_distinct | most_common_vals      | most_common_freqs    |
+|------------|-----------|------------|-----------|-----------|------------|-----------------------|----------------------|
+| public     | employees | department | 0.0       | 10        | -0.428571  | {HR,Engineering,Marketing} | {0.428571, 0.285714, 0.285714} |
+
+- `null_frac`가 0.0이므로 `department` 열에 NULL 값은 없다.
+- `avg_width`는 10으로, `department` 열의 평균 길이가 10바이트이다.
+- `n_distinct`가 -0.428571이므로, 전체 행의 약 42.8571%가 고유한 `department` 값을 가진다.
+- `most_common_vals`는 `HR`, `Engineering`, `Marketing`이며, 각각의 빈도는 42.8571%, 28.5714%, 28.5714%이다.
+
+이 정보를 통해 쿼리 플래너는 `department` 열을 포함하는 쿼리의 실행 계획을 최적화할 수 있다. `n_distinct`와 같은 통계 정보는 데이터베이스 성능 최적화에 매우 중요한 역할을 한다.
+
+#### `n_distinct`와 Index Skip Scan의 관계
+`n_distinct` 값이 작으면, 즉 해당 열의 고유 값의 수가 적으면 인덱스 스킵 스캔이 더 효율적일 수 있다. 이는 인덱스를 사용하여 고유 값을 빠르게 찾을 수 있기 때문이다. 반면, `n_distinct` 값이 크면 인덱스 스킵 스캔의 효율성이 떨어질 수 있다.
+
+#### 예시
+다음은 `employees` 테이블에서 `department` 열의 `n_distinct` 값을 이용한 Index Skip Scan 적용 예시이다.
+
+1. **샘플 테이블 생성 및 데이터 삽입**
+```sql
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    department VARCHAR(50)
+);
+
+INSERT INTO employees (name, department) VALUES
+('Alice', 'HR'),
+('Bob', 'Engineering'),
+('Charlie', 'Engineering'),
+('David', 'HR'),
+('Eve', 'Marketing'),
+('Frank', 'HR'),
+('Grace', 'Marketing');
+```
+
+2. **인덱스 생성**
+```sql
+CREATE INDEX idx_department ON employees(department);
+```
+
+3. **통계 수집**
+```sql
+ANALYZE employees;
+```
+
+4. **`PG_STATS`에서 `n_distinct` 확인**
+```sql
+SELECT
+    schemaname,
+    tablename,
+    attname,
+    n_distinct
+FROM
+    pg_stats
+WHERE
+    tablename = 'employees' AND attname = 'department';
+```
+
+위 쿼리 결과에서 `n_distinct` 값이 -0.428571이라면, 이는 `department` 열의 고유 값이 전체 행의 약 42.8571%에 해당함을 의미한다.
+
+5. **Index Skip Scan 적용 쿼리**
+```sql
+EXPLAIN ANALYZE
+SELECT DISTINCT department FROM employees;
+```
+
+이 쿼리를 실행하면 쿼리 플래너는 인덱스 스킵 스캔을 사용할지 결정한다. `n_distinct` 값이 작으므로, 인덱스 스킵 스캔이 적용될 가능성이 크다.
+
+#### Index Skip Scan의 장점
+- **효율성**: 필요한 값들만 선택적으로 스캔하여 I/O 비용을 절감한다.
+- **성능 향상**: 대용량 데이터베이스에서 쿼리 성능을 크게 향상시킬 수 있다.
+
+#### 주의사항
+- **n_distinct의 정확성**: `ANALYZE` 명령어를 통해 최신 통계를 유지해야 한다. 부정확한 `n_distinct` 값은 잘못된 쿼리 플래닝을 초래할 수 있다.
+- **인덱스의 존재**: 인덱스 스킵 스캔을 사용하려면 해당 열에 인덱스가 있어야 한다.
+
+`n_distinct`는 인덱스 스킵 스캔 적용 여부를 판단하는 중요한 지표로, 적절히 활용하면 데이터베이스 성능 최적화에 큰 도움이 된다.
+
+`n_distinct`가 낮다는 것은 특정 열에 대해 고유 값의 수가 적다는 것을 의미하며, 이는 해당 열에 인덱스를 사용할 때 효율적일 수 있음을 나타낸다. `n_distinct`가 낮을 때 Index Skip Scan을 적용하는 이유는 특정 상황에서 효율성을 높일 수 있기 때문이다. 다만, `n_distinct` 값이 낮다는 것이 반드시 Index Skip Scan이 항상 적용되어야 한다는 것을 의미하지는 않는다.
+
+### Index Skip Scan의 개념
+Index Skip Scan은 특정 인덱스에서 원하는 값을 건너뛰며 스캔하는 방법이다. 이는 특정 쿼리에서 유용할 수 있다. 예를 들어, `DISTINCT`나 `GROUP BY` 쿼리에서 고유 값만을 찾기 위해 사용될 수 있다.
+
+### `n_distinct`와 인덱스 사용의 관계
+1. **일반적인 인덱스 스캔**: `n_distinct`가 낮을 때, 해당 열의 고유 값이 적으므로 인덱스 스캔이 효율적일 수 있다. 인덱스를 사용하면 특정 값들을 빠르게 찾을 수 있다.
+2. **Index Skip Scan**: `n_distinct`가 낮을 때, 인덱스 스킵 스캔은 고유 값들만 선택적으로 스캔하여 효율성을 높일 수 있다. 이는 특히 `DISTINCT`나 `GROUP BY`와 같은 쿼리에서 유용하다.
+
+### 예시
+다음은 `employees` 테이블에서 `department` 열의 `n_distinct` 값이 낮을 때 Index Skip Scan이 적용되는 예시이다.
+
+#### 샘플 데이터
+```sql
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    department VARCHAR(50)
+);
+
+INSERT INTO employees (name, department) VALUES
+('Alice', 'HR'),
+('Bob', 'Engineering'),
+('Charlie', 'Engineering'),
+('David', 'HR'),
+('Eve', 'Marketing'),
+('Frank', 'HR'),
+('Grace', 'Marketing');
+```
+
+#### 통계 수집
+```sql
+ANALYZE employees;
+```
+
+#### `PG_STATS`에서 `n_distinct` 확인
+```sql
+SELECT
+    schemaname,
+    tablename,
+    attname,
+    n_distinct
+FROM
+    pg_stats
+WHERE
+    tablename = 'employees' AND attname = 'department';
+```
+
+#### `EXPLAIN ANALYZE`를 통해 쿼리 플랜 확인
+```sql
+EXPLAIN ANALYZE
+SELECT DISTINCT department FROM employees;
+```
+
+### `n_distinct`가 낮을 때의 장점
+- **빠른 검색**: 인덱스를 사용하면 고유 값을 빠르게 검색할 수 있다.
+- **효율적 스캔**: Index Skip Scan은 필요한 고유 값들만 선택적으로 스캔하므로, 불필요한 스캔을 줄일 수 있다.
+- **성능 최적화**: 데이터가 클 경우, 고유 값이 적다면 Index Skip Scan을 통해 쿼리 성능을 최적화할 수 있다.
+
+### 결론
+- `n_distinct`가 낮을 때, 일반적인 인덱스 스캔뿐만 아니라 Index Skip Scan도 효율적으로 적용될 수 있다.
+- 실제로 적용 여부는 쿼리 플래너가 데이터와 쿼리의 특성을 고려하여 결정한다.
+- 쿼리 성능을 최적화하기 위해서는 `EXPLAIN ANALYZE`를 사용하여 쿼리 플랜을 확인하고, 적절한 인덱스 전략을 선택하는 것이 중요하다.
+
+`n_distinct`가 낮다는 것은 특정 열에 대해 고유 값의 수가 적다는 것을 의미하며, 이는 해당 열에 인덱스를 사용할 때 효율적일 수 있음을 나타낸다. `n_distinct`가 낮을 때 Index Skip Scan을 적용하는 이유는 특정 상황에서 효율성을 높일 수 있기 때문이다. 다만, `n_distinct` 값이 낮다는 것이 반드시 Index Skip Scan이 항상 적용되어야 한다는 것을 의미하지는 않는다.
+
+## 구체적 사례
 
 Index Skip Scan 기능은 인덱스의 첫 번째 컬럼이 쿼리의 WHERE 절에 없더라도 인덱스의 나머지 컬럼을 활용할 수 있게 해준다. PostgreSQL에서는 이와 같은 기능이 기본적으로 지원되지 않기 때문에, 유사한 효과를 내기 위해서는 다른 접근 방식을 사용해야 합니다.  
 여기서는 CTE (Common Table Expressions)와 재귀 쿼리를 활용하여 PostgreSQL에서 비슷한 성능 최적화를 이루는 사례를 설명합니다.
