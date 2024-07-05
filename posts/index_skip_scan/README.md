@@ -57,15 +57,25 @@ PostgreSQL에는 `PG_STATS` 을 통해 테이블의 통계 정보를 제공한�
 #### 1. 샘플 테이블 생성 및 데이터 삽입
 
 ```sql
-create table posts (
-    id serial primary key,
-    course_id integer,
-    type              varchar(255),
-    is_spam           boolean                  default false,
-    deleted_at        timestamp with time zone
+CREATE TABLE user_activity (
+    activity_id SERIAL PRIMARY KEY,
+    user_id INT,
+    activity_type VARCHAR(50),
+    activity_time TIMESTAMP
 );
 
-create index idx_posts_1 on posts (type, course_id, is_spam, deleted_at);
+-- 대량 데이터 삽입을 위한 SQL 스크립트
+INSERT INTO user_activity (user_id, activity_type, activity_time)
+SELECT 
+    (random() * 10000)::int,
+    CASE 
+        WHEN g.i % 4 = 0 THEN 'login'
+        WHEN g.i % 4 = 1 THEN 'logout'
+        WHEN g.i % 4 = 2 THEN 'purchase'
+        ELSE 'view'
+    END,
+    NOW() - interval '1 day' * (random() * 365)
+FROM generate_series(1, 1000000) AS g(i);
 ```
 
 #### 2. 통계 수집
@@ -78,18 +88,15 @@ ANALYZE employees;
 
 ```sql
 SELECT
-    schemaname,
-    tablename,
     attname,
     null_frac,
     avg_width,
     n_distinct,
-    most_common_vals,
-    most_common_freqs
+    most_common_vals
 FROM
     pg_stats
 WHERE
-    tablename = 'posts' AND attname = 'course_id';
+    tablename = 'user_activity' AND attname IN ('activity_type', 'user_id');
 ```
 
 ### 예시 결과 해석
