@@ -3,7 +3,7 @@
 PostgreSQL에는 `PG_STATS` 을 통해 테이블의 통계 정보를 제공한다. 
 이를 쿼리 플래너가 최적의 쿼리 실행 계획을 세우는 데 사용한다.  
   
-이 중 주요 컬럼 중 하나는 `n_distinct`로, 이는 해당 열의 고유 값의 수에 대한 통계치를 나타낸다.
+이 중 주요 컬럼 중 하나는 `n_distinct`로, 이는 해당 열  의 고유 값의 수에 대한 통계치를 나타낸다.
 
 - `n_distinct`: [해당 열의 고유 값의 수에 대한 추정치](https://www.postgresql.org/docs/current/view-pg-stats.html)
 
