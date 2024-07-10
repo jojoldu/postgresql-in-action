@@ -100,6 +100,11 @@ maintenance_work_mem은 VACUUM, CREATE INDEX, ALTER TABLE ADD FOREIGN KEY 등의
 이 값을 늘리면 대규모 유지보수 작업의 성능이 향상될 수 있다.
 그러나 너무 크게 설정하면 메모리 부족 문제가 발생할 수 있으므로 주의가 필요하다.
 
+예를 들어, autovacuum workers 가 동시에 실행되는 상황을 생각해보자. maintenance_work_mem이 1GB로 설정된 경우, 이 세 세션은 총 3GB의 메모리를 사용하게 된다.
+높은 maintenance_work_mem 값과 함께 여러 세션에서 VACUUM, CREATE INDEX, ALTER TABLE ADD FOREIGN KEY 등을 동시에 실행하면 전체 메모리 사용률이 크게 증가할 수 있다.  
+이런 이유로 파라미터의 최대값을 2GB로 제한하는 것이 좋다
+
+
 #### 5. wal_buffers
 wal_buffers는 Write-Ahead Logging(WAL)에 사용되는 공유 메모리의 양을 지정한다.
 
