@@ -20,6 +20,19 @@ SET max_parallel_workers_per_gather = 4;  -- vCPU 수의 절반
 SET max_parallel_workers = 8;  -- vCPU 수와 동일
 ```
 
+- max_parallel_workers:
+  - 전체 시스템에서 동시에 활성화될 수 있는 최대 병렬 작업자 수를 지정한다.
+  - 일반적인 계산 방식: vCPU 수의 50% ~ 100%
+  - 예: 8 vCPU 시스템의 경우 4 ~ 8 사이의 값
+
+- max_parallel_workers_per_gather:
+  - 단일 쿼리에서 사용할 수 있는 최대 병렬 작업자 수를 지정한다.
+  - 데이터베이스 재시작이 필요 없다.
+  - 일반적으로 0(병렬 쿼리 비활성화)부터 인스턴스의 vCPU 수까지 설정할 수 있다.
+  - 일반적인 계산 방식: vCPU 수의 25% ~ 50%
+  - 예: 8 vCPU 시스템의 경우 2 ~ 4 사이의 값
+
+
 ### 메모리 관련 설정
 
 ```sql
