@@ -4,23 +4,22 @@
 ## 0. 테스트용 스키마 생성
 
 ```sql
--- Users 테이블
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(100),
     created_at DATE
 );
 
--- Orders 테이블
 CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(id),
     order_date DATE,
     amount DECIMAL(10, 2)
 );
+```
 
--- Users 데이터
+```sql
 INSERT INTO users (name, email, created_at)
 SELECT 
     'User ' || i,
@@ -28,10 +27,9 @@ SELECT
     current_date - (random() * 1000)::int
 FROM generate_series(1, 1000) i;
 
--- Orders 데이터
 INSERT INTO orders (user_id, order_date, amount)
 SELECT 
-    (random() * 999 + 1)::int,
+    (random() * 999 + 1)::bigint,
     current_date - (random() * 365)::int,
     (random() * 1000)::numeric(10,2)
 FROM generate_series(1, 10000) i;
